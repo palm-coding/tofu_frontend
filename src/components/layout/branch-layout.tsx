@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "./theme-toggle";
 
 interface BranchLayoutProps {
   children: React.ReactNode;
@@ -196,6 +197,18 @@ export function BranchLayout({ children, branchId }: BranchLayoutProps) {
           {/* Navigation */}
           <nav className="flex flex-1 flex-col px-2">
             <ul className="flex flex-1 flex-col gap-y-7">
+              {/* Theme toggle */}
+              <li className="px-2 pt-2">
+                {sidebarCollapsed ? (
+                  <div className="flex justify-center">
+                    <ThemeToggle variant="icon" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+                    <ThemeToggle variant="switch" />
+                  </div>
+                )}
+              </li>
               <li>
                 <ul className="space-y-1">
                   {navigation.map((item) => (
