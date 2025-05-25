@@ -39,6 +39,7 @@ interface DashboardContentProps {
 
 export function DashboardDisplay({ branchId }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  console.log("activeTab:", activeTab);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

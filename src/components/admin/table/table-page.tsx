@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QRCodeSVG } from "qrcode.react";
 import {
+  AlertCircle,
   Coffee,
   QrCode,
   ShoppingCart,
@@ -25,6 +26,7 @@ import {
   Plus,
   Clock,
   Phone,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -41,299 +43,206 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { motion } from "framer-motion";
+import {
+  TableItem,
+  QueueItem,
+  NewQueueInput,
+  Order,
+  OrderItem,
+} from "@/interfaces/table.interface";
+import { tableService } from "@/services/table.service";
 
 interface TableManagementProps {
   branchId: string;
 }
 
-// Mock tables data (removed reserved status)
-const mockTables = [
-  { id: "1", name: "โต๊ะ 1", status: "available", capacity: 2 },
-  {
-    id: "2",
-    name: "โต๊ะ 2",
-    status: "occupied",
-    capacity: 4,
-    checkinTime: "14:30",
-    customerName: "ลูกค้า",
-    sessionId: "branch1_2_1703123456789",
-    orders: [
-      {
-        id: "order1",
-        status: "preparing",
-        createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
-        items: [
-          {
-            id: "item1",
-            name: "น้ำเต้าหู้ร้อน",
-            quantity: 2,
-            price: 25,
-            note: "หวานน้อย",
-            status: "preparing",
-          },
-          {
-            id: "item4",
-            name: "ปาท่องโก๋",
-            quantity: 4,
-            price: 10,
-            note: "",
-            status: "preparing",
-          },
-        ],
-        total: 90,
-      },
-    ],
-  },
-  { id: "3", name: "โต๊ะ 3", status: "available", capacity: 4 },
-  { id: "4", name: "โต๊ะ 4", status: "available", capacity: 2 },
-  {
-    id: "5",
-    name: "โต๊ะ 5",
-    status: "occupied",
-    capacity: 6,
-    checkinTime: "15:15",
-    customerName: "ลูกค้า",
-    sessionId: "branch1_5_1703123456790",
-    orders: [
-      {
-        id: "order2",
-        status: "served",
-        createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
-        items: [
-          {
-            id: "item2",
-            name: "น้ำเต้าหู้เย็น",
-            quantity: 1,
-            price: 30,
-            note: "ไม่ใส่น้ำแข็ง",
-            status: "served",
-          },
-          {
-            id: "item3",
-            name: "น้ำเต้าหู้ปั่น",
-            quantity: 1,
-            price: 35,
-            note: "",
-            status: "served",
-          },
-        ],
-        total: 65,
-      },
-      {
-        id: "order3",
-        status: "pending",
-        createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
-        items: [
-          {
-            id: "item5",
-            name: "ขนมไข่",
-            quantity: 2,
-            price: 15,
-            note: "",
-            status: "pending",
-          },
-        ],
-        total: 30,
-      },
-    ],
-  },
-  { id: "6", name: "โต๊ะ 6", status: "available", capacity: 4 },
-  { id: "7", name: "โต๊ะ 7", status: "available", capacity: 2 },
-  {
-    id: "8",
-    name: "โต๊ะ 8",
-    status: "occupied",
-    capacity: 4,
-    checkinTime: "16:00",
-    customerName: "ลูกค้า",
-    sessionId: "branch1_8_1703123456791",
-    orders: [
-      {
-        id: "order4",
-        status: "served",
-        createdAt: new Date(Date.now() - 25 * 60000).toISOString(),
-        items: [
-          {
-            id: "item1",
-            name: "น้ำเต้าหู้ร้อน",
-            quantity: 3,
-            price: 25,
-            note: "",
-            status: "served",
-          },
-          {
-            id: "item6",
-            name: "เต้าฮวยฟรุตสลัด",
-            quantity: 1,
-            price: 45,
-            note: "ไม่ใส่แตงโม",
-            status: "served",
-          },
-        ],
-        total: 120,
-      },
-    ],
-  },
-  { id: "9", name: "โต๊ะ 9", status: "available", capacity: 2 },
-  { id: "10", name: "โต๊ะ 10", status: "available", capacity: 8 },
-  { id: "11", name: "โต๊ะ 11", status: "available", capacity: 4 },
-  { id: "12", name: "โต๊ะ 12", status: "available", capacity: 2 },
-];
-
-// Mock queue data
-const mockQueue = [
-  {
-    id: "queue1",
-    customerName: "คุณสมชาย",
-    phoneNumber: "081-234-5678",
-    partySize: 4,
-    checkinTime: "18:00",
-    status: "waiting",
-    createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
-  },
-  {
-    id: "queue2",
-    customerName: "คุณมาลี",
-    phoneNumber: "089-876-5432",
-    partySize: 2,
-    checkinTime: "19:30",
-    status: "waiting",
-    createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
-  },
-  {
-    id: "queue3",
-    customerName: "คุณวิชัย",
-    phoneNumber: "092-111-2222",
-    partySize: 6,
-    checkinTime: "20:00",
-    status: "seated",
-    createdAt: new Date(Date.now() - 45 * 60000).toISOString(),
-  },
-];
-
 export function TableDisplay({ branchId }: TableManagementProps) {
-  const [tables, setTables] = useState(mockTables);
-  const [queue, setQueue] = useState(mockQueue);
-  const [selectedTable, setSelectedTable] = useState<any>(null);
+  // State for data
+  const [tables, setTables] = useState<TableItem[]>([]);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [selectedTable, setSelectedTable] = useState<TableItem | null>(null);
+
+  // UI state
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [queueDialogOpen, setQueueDialogOpen] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
   const [activeTab, setActiveTab] = useState("tables");
 
+  // Loading and error states
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   // Queue form state
-  const [newQueue, setNewQueue] = useState({
+  const [newQueue, setNewQueue] = useState<NewQueueInput>({
     customerName: "",
     phoneNumber: "",
     partySize: "",
     checkinTime: "",
   });
 
+  // Load tables and queue data
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch tables data
+        const tablesResponse = await tableService.getTables(branchId);
+        setTables(tablesResponse.tables);
+
+        // Fetch queue data
+        const queueResponse = await tableService.getQueue(branchId);
+        setQueue(queueResponse.queue);
+      } catch (err) {
+        console.error("Error loading table data:", err);
+        setError("ไม่สามารถโหลดข้อมูลโต๊ะและคิวได้ กรุณาลองอีกครั้ง");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, [branchId]);
+
   // Generate a unique session ID for QR code
   const generateSessionId = () => {
     return `${branchId}_${selectedTable?.id}_${Date.now()}`;
   };
 
-  const handleCheckin = (tableId: string) => {
-    // Find the table
-    const table = tables.find((t) => t.id === tableId);
-    if (!table) return;
+  const handleCheckin = async (tableId: string) => {
+    try {
+      setError(null);
+      const response = await tableService.tableCheckin(branchId, tableId);
 
-    const sessionId = `${branchId}_${tableId}_${Date.now()}`;
+      // Update tables state
+      setTables(
+        tables.map((table) => (table.id === tableId ? response.table : table))
+      );
 
-    // Update table status
-    const updatedTables = tables.map((table) => {
-      if (table.id === tableId) {
-        return {
-          ...table,
-          status: "occupied",
-          checkinTime: new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          customerName: "ลูกค้า",
-          sessionId: sessionId,
-          orders: [],
-        };
-      }
-      return table;
-    });
-
-    setTables(updatedTables);
-    setSelectedTable(updatedTables.find((t) => t.id === tableId));
-    setQrDialogOpen(true);
-  };
-
-  const handleCheckout = (tableId: string) => {
-    // Update table status
-    const updatedTables = tables.map((table) => {
-      if (table.id === tableId) {
-        return {
-          ...table,
-          status: "available",
-          checkinTime: undefined,
-          customerName: undefined,
-          sessionId: undefined,
-          orders: undefined,
-        };
-      }
-      return table;
-    });
-
-    setTables(updatedTables);
-    if (selectedTable?.id === tableId) {
-      setSelectedTable(null);
+      setSelectedTable(response.table);
+      setQrDialogOpen(true);
+    } catch (err) {
+      console.error("Error checking in table:", err);
+      setError("ไม่สามารถเช็คอินโต๊ะได้ กรุณาลองอีกครั้ง");
     }
-    setDetailsDialogOpen(false);
-    setIsPaid(false);
   };
 
-  const handleOpenDetails = (table: any) => {
+  const handleCheckout = async (tableId: string) => {
+    try {
+      setError(null);
+      await tableService.tableCheckout(branchId, tableId);
+
+      // Update tables state
+      setTables(
+        tables.map((table) =>
+          table.id === tableId
+            ? {
+                ...table,
+                status: "available",
+                checkinTime: undefined,
+                customerName: undefined,
+                sessionId: undefined,
+                orders: undefined,
+              }
+            : table
+        )
+      );
+
+      if (selectedTable?.id === tableId) {
+        setSelectedTable(null);
+      }
+      setDetailsDialogOpen(false);
+      setIsPaid(false);
+    } catch (err) {
+      console.error("Error checking out table:", err);
+      setError("ไม่สามารถเช็คเอาท์โต๊ะได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  const handleOpenDetails = (table: TableItem) => {
     setSelectedTable(table);
     setDetailsDialogOpen(true);
     setIsPaid(false);
   };
 
-  const handleShowQR = (table: any) => {
+  const handleShowQR = (table: TableItem) => {
     setSelectedTable(table);
     setQrDialogOpen(true);
   };
 
-  const handleAddQueue = () => {
+  const handleAddQueue = async () => {
     if (!newQueue.customerName || !newQueue.partySize || !newQueue.checkinTime)
       return;
 
-    const queueItem = {
-      id: `queue${Date.now()}`,
-      customerName: newQueue.customerName,
-      phoneNumber: newQueue.phoneNumber,
-      partySize: Number.parseInt(newQueue.partySize),
-      checkinTime: newQueue.checkinTime,
-      status: "waiting",
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      setError(null);
+      const response = await tableService.addToQueue(branchId, newQueue);
 
-    setQueue([...queue, queueItem]);
-    setNewQueue({
-      customerName: "",
-      phoneNumber: "",
-      partySize: "",
-      checkinTime: "",
-    });
-    setQueueDialogOpen(false);
+      // Update queue state
+      setQueue([...queue, response.queueItem]);
+
+      // Reset form
+      setNewQueue({
+        customerName: "",
+        phoneNumber: "",
+        partySize: "",
+        checkinTime: "",
+      });
+
+      setQueueDialogOpen(false);
+    } catch (err) {
+      console.error("Error adding to queue:", err);
+      setError("ไม่สามารถเพิ่มคิวได้ กรุณาลองอีกครั้ง");
+    }
   };
 
-  const handleSeatQueue = (queueId: string) => {
-    const updatedQueue = queue.map((item) =>
-      item.id === queueId ? { ...item, status: "seated" } : item
-    );
-    setQueue(updatedQueue);
+  const handleSeatQueue = async (queueId: string) => {
+    try {
+      setError(null);
+      const response = await tableService.updateQueueStatus(
+        branchId,
+        queueId,
+        "seated"
+      );
+
+      // Update queue state
+      setQueue(
+        queue.map((item) => (item.id === queueId ? response.queueItem : item))
+      );
+    } catch (err) {
+      console.error("Error updating queue status:", err);
+      setError("ไม่สามารถอัพเดทสถานะคิวได้ กรุณาลองอีกครั้ง");
+    }
   };
 
-  const handleCancelQueue = (queueId: string) => {
-    const updatedQueue = queue.filter((item) => item.id !== queueId);
-    setQueue(updatedQueue);
+  const handleCancelQueue = async (queueId: string) => {
+    try {
+      setError(null);
+      await tableService.removeFromQueue(branchId, queueId);
+
+      // Update queue state
+      setQueue(queue.filter((item) => item.id !== queueId));
+    } catch (err) {
+      console.error("Error removing from queue:", err);
+      setError("ไม่สามารถลบคิวได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedTable) return;
+
+    try {
+      setError(null);
+      await tableService.markTableAsPaid(branchId, selectedTable.id);
+      setIsPaid(true);
+    } catch (err) {
+      console.error("Error marking table as paid:", err);
+      setError("ไม่สามารถบันทึกการชำระเงินได้ กรุณาลองอีกครั้ง");
+    }
   };
 
   const getOrderUrl = (sessionId: string) => {
@@ -352,6 +261,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
       if (diffMins === 1) return "1 นาทีที่แล้ว";
       return `${diffMins} นาทีที่แล้ว`;
     } catch (error) {
+      console.error("Error parsing date:", error);
       return "ไม่ทราบเวลา";
     }
   };
@@ -366,6 +276,12 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         return "รอคิว";
       case "seated":
         return "นั่งแล้ว";
+      case "pending":
+        return "รอรับออร์เดอร์";
+      case "preparing":
+        return "กำลังทำ";
+      case "served":
+        return "เสิร์ฟแล้ว";
       default:
         return "ไม่ทราบ";
     }
@@ -388,16 +304,9 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     }
   };
 
-  const calculateTableTotal = (table: any) => {
+  const calculateTableTotal = (table: TableItem | null) => {
     if (!table || !table.orders || table.orders.length === 0) return 0;
-    return table.orders.reduce(
-      (total: number, order: any) => total + (order.total || 0),
-      0
-    );
-  };
-
-  const handleMarkAsPaid = () => {
-    setIsPaid(true);
+    return table.orders.reduce((total, order) => total + (order.total || 0), 0);
   };
 
   const getTableCardStyle = (status: string) => {
@@ -426,6 +335,20 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     }
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-gray-600 dark:text-gray-400" />
+          <p className="text-lg text-gray-600 dark:text-gray-400">
+            กำลังโหลดข้อมูล...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="p-6">
@@ -438,6 +361,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
               จัดการโต๊ะ สร้าง QR Code และจัดการคิวลูกค้า
             </p>
           </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           <Tabs
             value={activeTab}
@@ -841,7 +771,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
                         {selectedTable?.orders &&
                         selectedTable.orders.length > 0 ? (
                           selectedTable.orders.map(
-                            (order: any, index: number) => (
+                            (order: Order, index: number) => (
                               <div
                                 key={order.id}
                                 className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-4"
@@ -866,7 +796,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
                                 <div className="space-y-3">
                                   {order.items &&
-                                    order.items.map((item: any) => (
+                                    order.items.map((item: OrderItem) => (
                                       <div
                                         key={item.id}
                                         className="flex justify-between items-start py-2"
@@ -1016,7 +946,9 @@ export function TableDisplay({ branchId }: TableManagementProps) {
                               </Button>
                               <Button
                                 variant="outline"
-                                onClick={() => handleShowQR(selectedTable)}
+                                onClick={() =>
+                                  selectedTable && handleShowQR(selectedTable)
+                                }
                                 className="border-gray-300 hover:bg-gray-900 hover:text-white dark:border-gray-600 dark:hover:bg-gray-100 dark:hover:text-gray-900 transition-all duration-300"
                               >
                                 <QrCode className="mr-2 h-4 w-4" />
@@ -1042,8 +974,14 @@ export function TableDisplay({ branchId }: TableManagementProps) {
                     ปิด
                   </Button>
                   <Button
-                    onClick={() => handleCheckout(selectedTable?.id)}
-                    disabled={!isPaid && selectedTable?.orders?.length > 0}
+                    onClick={() =>
+                      selectedTable && handleCheckout(selectedTable.id)
+                    }
+                    disabled={
+                      !isPaid &&
+                      !!selectedTable?.orders?.length &&
+                      selectedTable?.orders?.length > 0
+                    }
                     className="flex-1 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300"
                   >
                     <Receipt className="mr-2 h-4 w-4" />

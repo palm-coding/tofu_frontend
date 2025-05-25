@@ -61,6 +61,7 @@ export const authService = {
           if (user) {
             // Remove password before returning
             const { password, ...userWithoutPassword } = user;
+            console.log("password", password)
             resolve({
               user: userWithoutPassword,
               token: "mock-jwt-token",

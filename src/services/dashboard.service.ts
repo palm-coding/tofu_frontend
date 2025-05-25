@@ -91,6 +91,7 @@ export const dashboardService = {
   getDashboardStats: async (
     branchId: string
   ): Promise<DashboardStatsResponse> => {
+    console.log("Fetching dashboard stats for branch:", branchId);
     try {
       // In a real app, we would call the API:
       // const response = await api.get(`/branches/${branchId}/dashboard/stats`);
@@ -110,6 +111,7 @@ export const dashboardService = {
 
   // Get weekly sales data
   getWeeklySales: async (branchId: string): Promise<WeeklySalesResponse> => {
+    console.log("Fetching weekly sales for branch:", branchId);
     try {
       // In a real app:
       // const response = await api.get(`/branches/${branchId}/dashboard/weekly-sales`);
@@ -130,6 +132,7 @@ export const dashboardService = {
   getMenuPopularity: async (
     branchId: string
   ): Promise<MenuPopularityResponse> => {
+    console.log("Fetching menu popularity for branch:", branchId);
     try {
       // In a real app:
       // const response = await api.get(`/branches/${branchId}/dashboard/menu-popularity`);
@@ -148,6 +151,7 @@ export const dashboardService = {
 
   // Get hourly sales and customer data
   getHourlySales: async (branchId: string): Promise<HourlySalesResponse> => {
+    console.log("Fetching hourly sales for branch:", branchId);
     try {
       // In a real app:
       // const response = await api.get(`/branches/${branchId}/dashboard/hourly-sales`);
@@ -168,6 +172,7 @@ export const dashboardService = {
   getAllDashboardData: async (
     branchId: string
   ): Promise<DashboardDataResponse> => {
+    console.log("Fetching all dashboard data for branch:", branchId);
     try {
       // In a real app:
       // const response = await api.get(`/branches/${branchId}/dashboard/all`);
