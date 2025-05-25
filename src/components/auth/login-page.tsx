@@ -25,7 +25,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { authService } from "@/services/auth.service";
+import { LoginRequest } from "@/interfaces/user.interface";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -36,37 +38,10 @@ const formSchema = z.object({
   }),
 });
 
-// Mock user data
-const mockUsers = [
-  {
-    id: "1",
-    email: "admin@tofupos.com",
-    password: "admin123",
-    name: "Super Admin",
-    role: "super_admin",
-    branchId: null,
-  },
-  {
-    id: "2",
-    email: "branch1@tofupos.com",
-    password: "branch123",
-    name: "Branch Owner 1",
-    role: "branch_owner",
-    branchId: "branch1",
-  },
-  {
-    id: "3",
-    email: "branch2@tofupos.com",
-    password: "branch123",
-    name: "Branch Owner 2",
-    role: "branch_owner",
-    branchId: "branch2",
-  },
-];
-
 export function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,36 +51,32 @@ export function LoginPage() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Find user with matching email and password
-    const user = mockUsers.find(
-      (u) => u.email === values.email && u.password === values.password
-    );
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    if (!user) {
+      const loginData: LoginRequest = {
+        email: values.email,
+        password: values.password,
+      };
+
+      const response = await authService.login(loginData);
+
+      // Store user info in localStorage
+      localStorage.setItem("user", JSON.stringify(response.user));
+
+      // Redirect based on role
+      if (response.user.role === "super_admin") {
+        router.push("/branches");
+      } else if (response.user.role === "branch_owner") {
+        router.push(`/${response.user.branchId}`);
+      }
+    } catch (err) {
+      console.error("Login error:", err);
       setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-      return;
-    }
-
-    // Clear any previous errors
-    setError(null);
-
-    // Store user info in localStorage (in a real app, you'd use a proper auth solution)
-    localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: user.id,
-        name: user.name,
-        role: user.role,
-        branchId: user.branchId,
-      })
-    );
-
-    // Redirect based on role - UPDATED PATHS
-    if (user.role === "super_admin") {
-      router.push("/branches");
-    } else if (user.role === "branch_owner") {
-      router.push(`/${user.branchId}`);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -155,8 +126,16 @@ export function LoginPage() {
             <Button
               type="submit"
               className="w-full bg-amber-600 hover:bg-amber-700"
+              disabled={isLoading}
             >
-              เข้าสู่ระบบ
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  กำลังเข้าสู่ระบบ...
+                </>
+              ) : (
+                "เข้าสู่ระบบ"
+              )}
             </Button>
           </form>
         </Form>
