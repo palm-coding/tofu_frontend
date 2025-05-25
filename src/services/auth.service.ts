@@ -1,5 +1,5 @@
 // services/auth.service.ts
-import axios from "axios";
+// import axios from "axios";
 import {
   LoginRequest,
   LoginResponse,
@@ -7,12 +7,12 @@ import {
   UserWithPassword,
 } from "@/interfaces/user.interface";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, // สำคัญมาก! ช่วยให้ส่ง cookies ได้
-});
+// const api = axios.create({
+//   baseURL: API_URL,
+//   withCredentials: true, // สำคัญมาก! ช่วยให้ส่ง cookies ได้
+// });
 
 // Mock user data
 const mockUsers: UserWithPassword[] = [

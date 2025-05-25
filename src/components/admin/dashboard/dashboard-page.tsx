@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Coffee, DollarSign, ShoppingCart, Users } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -25,6 +25,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { dashboardService } from "@/services/dashboard.service";
+import {
+  DashboardStatItem,
+  HourlySalesItem,
+  MenuPopularityItem,
+  WeeklySalesItem,
+} from "@/interfaces/dashboard.interface";
 
 interface DashboardContentProps {
   branchId: string;
@@ -32,67 +39,56 @@ interface DashboardContentProps {
 
 export function DashboardDisplay({ branchId }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data for dashboard
-  const stats = [
-    {
-      name: "รายได้วันนี้",
-      value: "฿8,250",
-      description: "+15% จากเมื่อวาน",
-      icon: DollarSign,
-    },
-    {
-      name: "ออร์เดอร์วันนี้",
-      value: "42",
-      description: "+5% จากเมื่อวาน",
-      icon: ShoppingCart,
-    },
-    {
-      name: "ลูกค้าวันนี้",
-      value: "35",
-      description: "+12% จากเมื่อวาน",
-      icon: Users,
-    },
-    {
-      name: "โต๊ะที่ใช้งาน",
-      value: "8/12",
-      description: "66% ของโต๊ะทั้งหมด",
-      icon: Coffee,
-    },
-  ];
+  // State for each data type
+  const [stats, setStats] = useState<DashboardStatItem[]>([]);
+  const [salesData, setSalesData] = useState<WeeklySalesItem[]>([]);
+  const [menuData, setMenuData] = useState<MenuPopularityItem[]>([]);
+  const [hourlyData, setHourlyData] = useState<HourlySalesItem[]>([]);
 
-  const salesData = [
-    { name: "จันทร์", sales: 4000 },
-    { name: "อังคาร", sales: 3000 },
-    { name: "พุธ", sales: 5000 },
-    { name: "พฤหัสบดี", sales: 2780 },
-    { name: "ศุกร์", sales: 7890 },
-    { name: "เสาร์", sales: 9490 },
-    { name: "อาทิตย์", sales: 6490 },
-  ];
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const menuData = [
-    { name: "น้ำเต้าหู้ร้อน", value: 35, color: "#FF8042" },
-    { name: "น้ำเต้าหู้เย็น", value: 25, color: "#00C49F" },
-    { name: "น้ำเต้าหู้ปั่น", value: 15, color: "#FFBB28" },
-    { name: "ปาท่องโก๋", value: 20, color: "#0088FE" },
-    { name: "อื่นๆ", value: 5, color: "#FF6B6B" },
-  ];
+        // Fetch all dashboard data in one call
+        const data = await dashboardService.getAllDashboardData(branchId);
 
-  const hourlyData = [
-    { time: "08:00", customers: 5, sales: 500 },
-    { time: "09:00", customers: 10, sales: 1200 },
-    { time: "10:00", customers: 15, sales: 1800 },
-    { time: "11:00", customers: 20, sales: 2500 },
-    { time: "12:00", customers: 25, sales: 3000 },
-    { time: "13:00", customers: 20, sales: 2400 },
-    { time: "14:00", customers: 15, sales: 1800 },
-    { time: "15:00", customers: 10, sales: 1200 },
-    { time: "16:00", customers: 12, sales: 1500 },
-    { time: "17:00", customers: 15, sales: 1800 },
-    { time: "18:00", customers: 18, sales: 2200 },
-    { time: "19:00", customers: 12, sales: 1500 },
-  ];
+        // Update state with the fetched data
+        setStats(data.stats);
+        setSalesData(data.salesData);
+        setMenuData(data.menuData);
+        setHourlyData(data.hourlyData);
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+        setError("ไม่สามารถโหลดข้อมูลแดชบอร์ดได้ กรุณาลองอีกครั้ง");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDashboardData();
+  }, [branchId]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" />
+        <p>กำลังโหลดข้อมูลแดชบอร์ด...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -105,22 +101,25 @@ export function DashboardDisplay({ branchId }: DashboardContentProps) {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <Card key={stat.name}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.name}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+          {stats.map((stat) => {
+            const StatIcon = stat.icon;
+            return (
+              <Card key={stat.name}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    {stat.name}
+                  </CardTitle>
+                  <StatIcon className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         <Tabs

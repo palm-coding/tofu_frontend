@@ -1,17 +1,17 @@
 // services/auth.service.ts
-import axios from "axios";
+// import axios from "axios";
 import {
   Branch,
   BranchDetailResponse,
   BranchListResponse,
 } from "@/interfaces/branch.interface";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true,
-});
+// const api = axios.create({
+//   baseURL: API_URL,
+//   withCredentials: true,
+// });
 
 // Mock branches data
 const mockBranches: Branch[] = [
