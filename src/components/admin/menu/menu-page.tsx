@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -31,87 +31,34 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Plus, Trash } from "lucide-react";
+import { AlertCircle, Edit, Loader2, Plus, Trash } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import Image from "next/image";
+import { menuService } from "@/services/menu.service";
+import {
+  MenuCategory,
+  MenuItem,
+  NewMenuItemDto,
+} from "@/interfaces/menu.interface";
 
 interface MenuManagementProps {
   branchId: string;
 }
 
-// Mock data for menu categories
-const mockCategories = [
-  { id: "cat1", name: "เครื่องดื่ม" },
-  { id: "cat2", name: "ของทานเล่น" },
-  { id: "cat3", name: "ของหวาน" },
-];
-
-// Mock data for menu items
-const mockMenuItems = [
-  {
-    id: "item1",
-    name: "น้ำเต้าหู้ร้อน",
-    description: "น้ำเต้าหู้ร้อนสูตรดั้งเดิม",
-    price: 25,
-    categoryId: "cat1",
-    isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    id: "item2",
-    name: "น้ำเต้าหู้เย็น",
-    description: "น้ำเต้าหู้เย็นหวานชื่นใจ",
-    price: 30,
-    categoryId: "cat1",
-    isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    id: "item3",
-    name: "น้ำเต้าหู้ปั่น",
-    description: "น้ำเต้าหู้ปั่นเข้มข้น",
-    price: 35,
-    categoryId: "cat1",
-    isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    id: "item4",
-    name: "ปาท่องโก๋",
-    description: "ปาท่องโก๋ทอดกรอบ",
-    price: 10,
-    categoryId: "cat2",
-    isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    id: "item5",
-    name: "ขนมไข่",
-    description: "ขนมไข่หอมนุ่ม",
-    price: 15,
-    categoryId: "cat2",
-    isAvailable: false,
-    imageUrl: "/placeholder.svg?height=100&width=100",
-  },
-  {
-    id: "item6",
-    name: "เต้าฮวยฟรุตสลัด",
-    description: "เต้าฮวยราดผลไม้รวม",
-    price: 45,
-    categoryId: "cat3",
-    isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
-  },
-];
-
 export function MenuDisplay({ branchId }: MenuManagementProps) {
-  const [categories, setCategories] = useState(mockCategories);
-  const [menuItems, setMenuItems] = useState(mockMenuItems);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [activeTab, setActiveTab] = useState("menu");
+  console.log("activeTab", activeTab);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [newCategory, setNewCategory] = useState("");
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(
+    null
+  );
 
-  const [newMenuItem, setNewMenuItem] = useState<any>({
+  const [newMenuItem, setNewMenuItem] = useState<NewMenuItemDto>({
     name: "",
     description: "",
     price: "",
@@ -119,49 +66,93 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
     isAvailable: true,
     imageUrl: "/placeholder.svg?height=200&width=200",
   });
-  const [editingMenuItem, setEditingMenuItem] = useState<any>(null);
+  const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
 
-  // Category functions
-  const handleAddCategory = () => {
-    if (!newCategory.trim()) return;
+  // Load data
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError(null);
 
-    const newCategoryObj = {
-      id: `cat${Date.now()}`,
-      name: newCategory,
-    };
+        // Fetch categories and menu items
+        const [categoriesResponse, menuItemsResponse] = await Promise.all([
+          menuService.getCategories(branchId),
+          menuService.getMenuItems(branchId),
+        ]);
 
-    setCategories([...categories, newCategoryObj]);
-    setNewCategory("");
-  };
-
-  const handleUpdateCategory = () => {
-    if (!editingCategory || !editingCategory.name.trim()) return;
-
-    const updatedCategories = categories.map((cat) =>
-      cat.id === editingCategory.id
-        ? { ...cat, name: editingCategory.name }
-        : cat
-    );
-
-    setCategories(updatedCategories);
-    setEditingCategory(null);
-  };
-
-  const handleDeleteCategory = (categoryId: string) => {
-    // Check if there are menu items using this category
-    const hasItems = menuItems.some((item) => item.categoryId === categoryId);
-
-    if (hasItems) {
-      alert("ไม่สามารถลบหมวดหมู่นี้ได้ เนื่องจากมีเมนูอยู่ในหมวดหมู่นี้");
-      return;
+        setCategories(categoriesResponse.categories);
+        setMenuItems(menuItemsResponse.items);
+      } catch (err) {
+        console.error("Error loading menu data:", err);
+        setError("ไม่สามารถโหลดข้อมูลเมนูได้ กรุณาลองอีกครั้ง");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    const updatedCategories = categories.filter((cat) => cat.id !== categoryId);
-    setCategories(updatedCategories);
+    loadData();
+  }, [branchId]);
+
+  // Category functions
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+
+    try {
+      const response = await menuService.createCategory(branchId, newCategory);
+      setCategories([...categories, response.category]);
+      setNewCategory("");
+    } catch (err) {
+      console.error("Failed to add category:", err);
+      setError("ไม่สามารถเพิ่มหมวดหมู่ได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory || !editingCategory.name.trim()) return;
+
+    try {
+      const response = await menuService.updateCategory(
+        branchId,
+        editingCategory.id,
+        editingCategory.name
+      );
+
+      const updatedCategories = categories.map((cat) =>
+        cat.id === editingCategory.id ? response.category : cat
+      );
+
+      setCategories(updatedCategories);
+      setEditingCategory(null);
+    } catch (err) {
+      console.error("Failed to update category:", err);
+      setError("ไม่สามารถแก้ไขหมวดหมู่ได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    try {
+      // Check if there are menu items using this category
+      const hasItems = menuItems.some((item) => item.categoryId === categoryId);
+
+      if (hasItems) {
+        alert("ไม่สามารถลบหมวดหมู่นี้ได้ เนื่องจากมีเมนูอยู่ในหมวดหมู่นี้");
+        return;
+      }
+
+      await menuService.deleteCategory(branchId, categoryId);
+      const updatedCategories = categories.filter(
+        (cat) => cat.id !== categoryId
+      );
+      setCategories(updatedCategories);
+    } catch (err) {
+      console.error("Failed to delete category:", err);
+      setError("ไม่สามารถลบหมวดหมู่ได้ กรุณาลองอีกครั้ง");
+    }
   };
 
   // Menu item functions
-  const handleAddMenuItem = () => {
+  const handleAddMenuItem = async () => {
     if (
       !newMenuItem.name.trim() ||
       !newMenuItem.categoryId ||
@@ -169,54 +160,103 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
     )
       return;
 
-    const newMenuItemObj = {
-      id: `item${Date.now()}`,
-      ...newMenuItem,
-      price: Number(newMenuItem.price),
-    };
-
-    setMenuItems([...menuItems, newMenuItemObj]);
-    setNewMenuItem({
-      name: "",
-      description: "",
-      price: "",
-      categoryId: "",
-      isAvailable: true,
-      imageUrl: "/placeholder.svg?height=200&width=200",
-    });
+    try {
+      const response = await menuService.createMenuItem(branchId, newMenuItem);
+      setMenuItems([...menuItems, response.item]);
+      setNewMenuItem({
+        name: "",
+        description: "",
+        price: "",
+        categoryId: "",
+        isAvailable: true,
+        imageUrl: "/placeholder.svg?height=200&width=200",
+      });
+    } catch (err) {
+      console.error("Failed to add menu item:", err);
+      setError("ไม่สามารถเพิ่มเมนูได้ กรุณาลองอีกครั้ง");
+    }
   };
 
-  const handleUpdateMenuItem = () => {
+  const handleUpdateMenuItem = async () => {
     if (
       !editingMenuItem ||
       !editingMenuItem.name.trim() ||
-      !editingMenuItem.categoryId ||
-      !editingMenuItem.price
+      !editingMenuItem.categoryId
     )
       return;
 
-    const updatedMenuItems = menuItems.map((item) =>
-      item.id === editingMenuItem.id
-        ? { ...editingMenuItem, price: Number(editingMenuItem.price) }
-        : item
+    try {
+      const response = await menuService.updateMenuItem(
+        branchId,
+        editingMenuItem.id,
+        editingMenuItem
+      );
+
+      const updatedMenuItems = menuItems.map((item) =>
+        item.id === editingMenuItem.id ? response.item : item
+      );
+
+      setMenuItems(updatedMenuItems);
+      setEditingMenuItem(null);
+    } catch (err) {
+      console.error("Failed to update menu item:", err);
+      setError("ไม่สามารถแก้ไขเมนูได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  const handleDeleteMenuItem = async (itemId: string) => {
+    try {
+      await menuService.deleteMenuItem(branchId, itemId);
+      const updatedMenuItems = menuItems.filter((item) => item.id !== itemId);
+      setMenuItems(updatedMenuItems);
+    } catch (err) {
+      console.error("Failed to delete menu item:", err);
+      setError("ไม่สามารถลบเมนูได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  const handleToggleAvailability = async (itemId: string) => {
+    try {
+      const response = await menuService.toggleMenuItemAvailability(
+        branchId,
+        itemId
+      );
+      const updatedMenuItems = menuItems.map((item) =>
+        item.id === itemId ? response.item : item
+      );
+      setMenuItems(updatedMenuItems);
+    } catch (err) {
+      console.error("Failed to toggle menu item availability:", err);
+      setError("ไม่สามารถเปลี่ยนสถานะเมนูได้ กรุณาลองอีกครั้ง");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" />
+        <p>กำลังโหลดข้อมูลเมนู...</p>
+      </div>
     );
+  }
 
-    setMenuItems(updatedMenuItems);
-    setEditingMenuItem(null);
-  };
-
-  const handleDeleteMenuItem = (itemId: string) => {
-    const updatedMenuItems = menuItems.filter((item) => item.id !== itemId);
-    setMenuItems(updatedMenuItems);
-  };
-
-  const handleToggleAvailability = (itemId: string) => {
-    const updatedMenuItems = menuItems.map((item) =>
-      item.id === itemId ? { ...item, isAvailable: !item.isAvailable } : item
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+          <Button
+            variant="outline"
+            className="mt-2"
+            onClick={() => window.location.reload()}
+          >
+            ลองใหม่
+          </Button>
+        </Alert>
+      </div>
     );
-
-    setMenuItems(updatedMenuItems);
-  };
+  }
 
   return (
     <div className="p-6">
@@ -448,7 +488,7 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
                                   onChange={(e) =>
                                     setEditingMenuItem({
                                       ...editingMenuItem,
-                                      price: e.target.value,
+                                      price: parseFloat(e.target.value) || 0,
                                     })
                                   }
                                 />
