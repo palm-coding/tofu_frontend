@@ -21,6 +21,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { kitchenService } from "@/services/kitchen.service";
 import { KitchenOrder, OrderStatus } from "@/interfaces/kitchen.interface";
+import { cn } from "@/lib/utils";
 
 interface KitchenDisplayProps {
   branchId: string;
@@ -147,6 +148,35 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
     }
   };
 
+  // Get color classes based on order status
+  const getOrderStatusColors = (status: OrderStatus) => {
+    switch (status) {
+      case "pending":
+        return {
+          borderColor: "var(--chart-4)",
+          buttonClass:
+            "bg-[var(--chart-4)] text-primary-foreground hover:bg-[var(--chart-4)]/90",
+        };
+      case "preparing":
+        return {
+          borderColor: "var(--chart-2)",
+          buttonClass:
+            "bg-[var(--chart-2)] text-primary-foreground hover:bg-[var(--chart-2)]/90",
+        };
+      case "served":
+        return {
+          borderColor: "var(--chart-3)",
+          buttonClass:
+            "bg-[var(--chart-3)] text-primary-foreground hover:bg-[var(--chart-3)]/90",
+        };
+      default:
+        return {
+          borderColor: "var(--border)",
+          buttonClass: "bg-primary text-primary-foreground hover:bg-primary/90",
+        };
+    }
+  };
+
   // Filter orders by status
   const pendingOrders = orders.filter((order) => order.status === "pending");
   const preparingOrders = orders.filter(
@@ -161,17 +191,19 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
     status: OrderStatus,
     nextStatus?: OrderStatus
   ) => {
+    const { borderColor, buttonClass } = getOrderStatusColors(status);
+
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between mb-4 bg-white text-black p-3 rounded-t-md">
+        <div className="flex items-center justify-between mb-4 bg-card text-card-foreground p-3 rounded-t-md">
           <h3 className="font-semibold">{title}</h3>
-          <Badge variant="outline" className="bg-red-300">
+          <Badge variant="outline" className="bg-red-300 text-accent-foreground">
             {statusOrders.length}
           </Badge>
         </div>
-        <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1 custom-scrollbar">
           {statusOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-32 border border-dashed rounded-md p-4">
+            <div className="flex flex-col items-center justify-center h-32 border border-dashed border-border rounded-md p-4">
               <Coffee className="h-8 w-8 text-muted-foreground mb-2 opacity-40" />
               <p className="text-muted-foreground text-sm">ไม่มีออร์เดอร์</p>
             </div>
@@ -181,17 +213,12 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                 key={order.id}
                 className="border-l-4 shadow-sm hover:shadow-md transition-all duration-200"
                 style={{
-                  borderLeftColor:
-                    status === "pending"
-                      ? "#f59e0b"
-                      : status === "preparing"
-                      ? "#3b82f6"
-                      : "#10b981",
+                  borderLeftColor: borderColor,
                 }}
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg text-card-foreground">
                       {order.tableName || "โต๊ะไม่ระบุ"}
                     </CardTitle>
                     <div className="flex items-center text-sm text-muted-foreground">
@@ -201,7 +228,7 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                   </div>
                 </CardHeader>
                 <CardContent className="pb-2">
-                  <p className="text-sm mb-2">
+                  <p className="text-sm mb-2 text-card-foreground">
                     ลูกค้า: {order.customerName || "ไม่ระบุ"}
                   </p>
                   <ul className="space-y-2">
@@ -212,7 +239,9 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                           className="flex justify-between items-center"
                         >
                           <div>
-                            <span className="font-medium">{item.name}</span>
+                            <span className="font-medium text-card-foreground">
+                              {item.name}
+                            </span>
                             <span className="text-sm text-muted-foreground ml-2">
                               x{item.quantity || 0}
                             </span>
@@ -230,13 +259,14 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                                 handleCompleteItem(order.id, item.id)
                               }
                               disabled={item.status === "served" || isUpdating}
-                              className={
-                                item.status === "served" ? "bg-green-50" : ""
-                              }
+                              className={cn(
+                                "border-input",
+                                item.status === "served" ? "bg-accent/30" : ""
+                              )}
                             >
                               {item.status === "served" ? (
                                 <>
-                                  <CheckCircle className="mr-1 h-4 w-4 text-green-500" />
+                                  <CheckCircle className="mr-1 h-4 w-4 text-[var(--chart-3)]" />
                                   เสร็จแล้ว
                                 </>
                               ) : isUpdating ? (
@@ -253,14 +283,9 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                 {nextStatus && (
                   <CardFooter>
                     <Button
-                      className="w-full"
+                      className={cn("w-full", buttonClass)}
                       onClick={() => handleMoveOrder(order.id, nextStatus)}
                       disabled={isUpdating}
-                      style={{
-                        backgroundColor:
-                          status === "pending" ? "#f59e0b" : "#3b82f6",
-                        color: "white",
-                      }}
                     >
                       {isUpdating ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -280,22 +305,22 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" />
-        <p>กำลังโหลดข้อมูลออร์เดอร์...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin mr-2 text-muted-foreground" />
+        <p className="text-foreground">กำลังโหลดข้อมูลออร์เดอร์...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="p-6 bg-background">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
           <Button
             variant="outline"
-            className="mt-2"
+            className="mt-2 border-input"
             onClick={() => window.location.reload()}
           >
             ลองอีกครั้ง
@@ -306,10 +331,12 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
   }
 
   return (
-    <div className="p-4 h-full bg-gray-50">
+    <div className="p-4 h-full bg-background">
       <div className="flex flex-col space-y-4 h-full">
         <div className="flex flex-col space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">ห้องครัว</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            ห้องครัว
+          </h1>
           <p className="text-muted-foreground">
             จัดการออร์เดอร์และการเตรียมอาหาร
           </p>
@@ -323,7 +350,7 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-200px)]">
-          <div className="bg-white rounded-md shadow p-3 flex flex-col">
+          <div className="bg-card rounded-md shadow p-3 flex flex-col border border-border">
             {renderOrderColumn(
               "รอรับออเดอร์",
               pendingOrders,
@@ -331,7 +358,7 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
               "preparing"
             )}
           </div>
-          <div className="bg-white rounded-md shadow p-3 flex flex-col">
+          <div className="bg-card rounded-md shadow p-3 flex flex-col border border-border">
             {renderOrderColumn(
               "กำลังทำ",
               preparingOrders,
@@ -339,7 +366,7 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
               "served"
             )}
           </div>
-          <div className="bg-white rounded-md shadow p-3 flex flex-col">
+          <div className="bg-card rounded-md shadow p-3 flex flex-col border border-border">
             {renderOrderColumn("เสิร์ฟแล้ว", servedOrders, "served")}
           </div>
         </div>

@@ -81,7 +81,7 @@ export function BranchLayout({ children, branchId }: BranchLayoutProps) {
   if (!user || !branch || !mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <p className="text-gray-600 dark:text-gray-400">กำลังโหลด...</p>
+        <p className="text-gray-600 dark:text-gray-400"></p>
       </div>
     );
   }
