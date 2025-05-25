@@ -4,6 +4,9 @@ export interface User {
   name: string;
   role: "super_admin" | "branch_owner" | "staff";
   branchId: string | null;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UserWithPassword extends User {

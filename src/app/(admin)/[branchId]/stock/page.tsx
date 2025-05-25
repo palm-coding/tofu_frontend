@@ -1,14 +1,11 @@
-import { BranchLayout } from "@/components/layout/branch-layout";
-import { StockDisplay } from "@/components/admin/stock/stock-page";
+"use client";
 
-export default function StockPage({
-  params,
-}: {
-  params: { branchId: string };
-}) {
-  return (
-    <BranchLayout branchId={params.branchId}>
-      <StockDisplay branchId={params.branchId} />
-    </BranchLayout>
-  );
+import { StockDisplay } from "@/components/admin/stock/stock-page";
+import { useParams } from "next/navigation";
+
+export default function StockPage() {
+  const params = useParams();
+  const branchId = params.branchId as string;
+
+  return <StockDisplay branchId={branchId} />;
 }

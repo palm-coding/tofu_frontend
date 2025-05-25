@@ -1,14 +1,11 @@
-import { KitchenDisplay } from "@/components/admin/kitchen/kitchen-page";
-import { BranchLayout } from "@/components/layout/branch-layout";
+"use client";
 
-export default function KitchenPage({
-  params,
-}: {
-  params: { branchId: string };
-}) {
-  return (
-    <BranchLayout branchId={params.branchId}>
-      <KitchenDisplay branchId={params.branchId} />
-    </BranchLayout>
-  );
+import { KitchenDisplay } from "@/components/admin/kitchen/kitchen-page";
+import { useParams } from "next/navigation";
+
+export default function KitchenPage() {
+  const params = useParams();
+  const branchId = params.branchId as string;
+
+  return <KitchenDisplay branchId={branchId} />;
 }

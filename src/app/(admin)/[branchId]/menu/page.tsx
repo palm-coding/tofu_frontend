@@ -1,10 +1,11 @@
-import { BranchLayout } from "@/components/layout/branch-layout";
-import { MenuDisplay } from "@/components/admin/menu/menu-page";
+"use client";
 
-export default function MenuPage({ params }: { params: { branchId: string } }) {
-  return (
-    <BranchLayout branchId={params.branchId}>
-      <MenuDisplay branchId={params.branchId} />
-    </BranchLayout>
-  );
+import { MenuDisplay } from "@/components/admin/menu/menu-page";
+import { useParams } from "next/navigation";
+
+export default function MenuPage() {
+  const params = useParams();
+  const branchId = params.branchId as string;
+
+  return <MenuDisplay branchId={branchId} />;
 }
