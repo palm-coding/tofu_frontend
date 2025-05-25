@@ -25,9 +25,6 @@ import {
   History,
   Search,
   Coffee,
-  CupSoda,
-  Dessert,
-  UtensilsCrossed,
 } from "lucide-react";
 import Image from "next/image";
 import {
@@ -41,178 +38,40 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { toast, Toaster } from "sonner";
-
-// Mock data for menu categories
-const mockCategories = [
-  { id: "cat1", name: "เครื่องดื่ม", icon: CupSoda },
-  { id: "cat2", name: "ของทานเล่น", icon: Coffee },
-  { id: "cat3", name: "ของหวาน", icon: Dessert },
-  { id: "cat4", name: "อาหารจานหลัก", icon: UtensilsCrossed },
-];
-
-// Mock data for menu items
-const mockMenuItems = [
-  {
-    id: "item1",
-    name: "น้ำเต้าหู้ร้อน",
-    description:
-      "น้ำเต้าหู้ร้อนสูตรดั้งเดิม รสชาติกลมกล่อม หอมกลิ่นถั่วเหลืองแท้",
-    price: 25,
-    categoryId: "cat1",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item2",
-    name: "น้ำเต้าหู้เย็น",
-    description:
-      "น้ำเต้าหู้เย็นหวานชื่นใจ เสิร์ฟพร้อมน้ำแข็ง ดับกระหายคลายร้อน",
-    price: 30,
-    categoryId: "cat1",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item3",
-    name: "น้ำเต้าหู้ปั่น",
-    description:
-      "น้ำเต้าหู้ปั่นเข้มข้น ผสมนมสด เนื้อเนียนละมุน หวานมัน อร่อยเย็นชื่นใจ",
-    price: 35,
-    categoryId: "cat1",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item4",
-    name: "ปาท่องโก๋",
-    description:
-      "ปาท่องโก๋ทอดกรอบ เนื้อนุ่ม ทานคู่กับน้ำเต้าหู้ร้อนเข้ากันอย่างลงตัว",
-    price: 10,
-    categoryId: "cat2",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item5",
-    name: "ขนมไข่",
-    description: "ขนมไข่หอมนุ่ม ทำสดใหม่ทุกวัน รสชาติหวานกำลังดี ทานเพลิน",
-    price: 15,
-    categoryId: "cat2",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item6",
-    name: "เต้าฮวยฟรุตสลัด",
-    description:
-      "เต้าฮวยเนื้อนุ่ม ราดด้วยน้ำเชื่อมหอมหวาน เสิร์ฟพร้อมผลไม้รวมตามฤดูกาล",
-    price: 45,
-    categoryId: "cat3",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item7",
-    name: "ข้าวผัดน้ำเต้าหู้",
-    description:
-      "ข้าวผัดหอมๆ ใส่น้ำเต้าหู้ผัดกับผักรวม รสชาติกลมกล่อม อร่อยถูกปาก",
-    price: 45,
-    categoryId: "cat4",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item8",
-    name: "ผัดไทยน้ำเต้าหู้",
-    description:
-      "ผัดไทยสูตรพิเศษ ใส่น้ำเต้าหู้แทนเต้าหู้ธรรมดา หวานมัน เปรื้อยนิดๆ",
-    price: 50,
-    categoryId: "cat4",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item9",
-    name: "ต้มยำน้ำเต้าหู้",
-    description:
-      "ต้มยำรสจัดจ้าน ใส่น้ำเต้าหู้เนื้อนุ่ม เปรี้ยวเผ็ดอร่อย กินกับข้าวสวยร้อนๆ",
-    price: 55,
-    categoryId: "cat4",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item10",
-    name: "แกงเขียวหวานน้ำเต้าหู้",
-    description:
-      "แกงเขียวหวานหอมกะทิ ใส่น้ำเต้าหู้และผักสด รสชาติเข้มข้น หอมใบโหระพา",
-    price: 60,
-    categoryId: "cat4",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item11",
-    name: "น้ำเต้าหู้ทอดกรอบ",
-    description: "น้ำเต้าหู้ทอดกรอบนอกนุ่มใน เสิร์ฟพร้อมน้ำจิ้มรสเด็ด",
-    price: 35,
-    categoryId: "cat2",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item12",
-    name: "เต้าฮวยน้ำกะทิ",
-    description: "เต้าฮวยเนื้อนุ่ม ราดด้วยน้ำกะทิหอมหวาน เย็นชื่นใจ",
-    price: 40,
-    categoryId: "cat3",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item13",
-    name: "น้ำเต้าหู้มัทฉะ",
-    description: "น้ำเต้าหู้รสมัทฉะ หอมชาเขียว หวานมัน เข้มข้น",
-    price: 40,
-    categoryId: "cat1",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-  {
-    id: "item14",
-    name: "ไอศกรีมน้ำเต้าหู้",
-    description: "ไอศกรีมน้ำเต้าหู้เนื้อเนียนนุ่ม รสชาติเข้มข้น เย็นชื่นใจ",
-    price: 35,
-    categoryId: "cat3",
-    imageUrl: "/placeholder.svg?height=300&width=300",
-  },
-];
-
-// Mock session data
-const getMockSession = (sessionId: string) => {
-  const [branchId, tableId] = sessionId.split("_");
-  return {
-    id: sessionId,
-    branchId,
-    tableId,
-    tableName: `โต๊ะ ${tableId}`,
-    branchName:
-      branchId === "branch1"
-        ? "สาขาตลาดเมืองใหม่"
-        : branchId === "branch2"
-        ? "สาขาตลาดใน"
-        : branchId === "branch3"
-        ? "สาขาหาดใหญ่"
-        : "สาขาไม่ทราบชื่อ",
-  };
-};
+import { orderService } from "@/services/order.service";
+import {
+  CartItem,
+  MenuItem,
+  MenuCategory,
+  Order,
+  OrderStatus,
+  SessionData,
+  SubmitOrderRequest,
+} from "@/interfaces/order.interface";
 
 interface OrderPageProps {
   sessionId: string;
 }
 
 export function OrderDisplay({ sessionId }: OrderPageProps) {
-  const [session, setSession] = useState<any>(null);
-  const [userName, setUserName] = useState("");
-  const [userNameSubmitted, setUserNameSubmitted] = useState(false);
-  const [cart, setCart] = useState<any[]>([]);
-  const [activeCategory, setActiveCategory] = useState(mockCategories[0].id);
-  const [cartDialogOpen, setCartDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("menu");
-  const [orderHistory, setOrderHistory] = useState<any[]>([]);
-  const [selectedItem, setSelectedItem] = useState<any>(null);
-  const [itemDialogOpen, setItemDialogOpen] = useState(false);
-  const [itemQuantity, setItemQuantity] = useState(1);
-  const [itemNote, setItemNote] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isTabsSticky, setIsTabsSticky] = useState(false);
+  // State with proper TypeScript typing
+  const [session, setSession] = useState<SessionData | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  const [userNameSubmitted, setUserNameSubmitted] = useState<boolean>(false);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>("");
+  const [cartDialogOpen, setCartDialogOpen] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<string>("menu");
+  const [orderHistory, setOrderHistory] = useState<Order[]>([]);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [itemDialogOpen, setItemDialogOpen] = useState<boolean>(false);
+  const [itemQuantity, setItemQuantity] = useState<number>(1);
+  const [itemNote, setItemNote] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isTabsSticky, setIsTabsSticky] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Refs for scroll detection
   const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -220,63 +79,52 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
   const searchRef = useRef<HTMLDivElement>(null);
   const categoryTabsRef = useRef<HTMLDivElement>(null);
 
+  // Initial data loading
   useEffect(() => {
-    // In a real app, you would fetch the session data from your API
-    const sessionData = getMockSession(sessionId);
-    setSession(sessionData);
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
 
-    // Check if user name is already in localStorage
-    const storedUserName = localStorage.getItem(`userName_${sessionId}`);
-    if (storedUserName) {
-      setUserName(storedUserName);
-      setUserNameSubmitted(true);
-    }
+        // Fetch session data
+        const sessionResponse = await orderService.getSession(sessionId);
+        setSession(sessionResponse.session);
 
-    // Check if cart is already in localStorage
-    const storedCart = localStorage.getItem(`cart_${sessionId}`);
-    if (storedCart) {
-      setCart(JSON.parse(storedCart));
-    }
+        // Fetch menu categories
+        const categoriesResponse = await orderService.getMenuCategories();
+        setCategories(categoriesResponse.categories);
 
-    // Check if order history is already in localStorage
-    const storedOrderHistory = localStorage.getItem(
-      `orderHistory_${sessionId}`
-    );
-    if (storedOrderHistory) {
-      setOrderHistory(JSON.parse(storedOrderHistory));
-    } else {
-      // Mock order history if none exists
-      const mockHistory = [
-        {
-          id: `order_${Date.now() - 1800000}`,
-          items: [
-            {
-              id: "item1",
-              name: "น้ำเต้าหู้ร้อน",
-              quantity: 2,
-              price: 25,
-              note: "หวานน้อย",
-            },
-            {
-              id: "item4",
-              name: "ปาท่องโก๋",
-              quantity: 1,
-              price: 10,
-              note: "",
-            },
-          ],
-          status: "served",
-          total: 60,
-          createdAt: new Date(Date.now() - 1800000).toISOString(),
-          userName: storedUserName || "ลูกค้า",
-        },
-      ];
-      setOrderHistory(mockHistory);
-      localStorage.setItem(
-        `orderHistory_${sessionId}`,
-        JSON.stringify(mockHistory)
-      );
-    }
+        if (categoriesResponse.categories.length > 0) {
+          setActiveCategory(categoriesResponse.categories[0].id);
+        }
+
+        // Fetch menu items
+        const menuItemsResponse = await orderService.getMenuItems();
+        setMenuItems(menuItemsResponse.items);
+
+        // Fetch order history
+        const historyResponse = await orderService.getOrderHistory(sessionId);
+        setOrderHistory(historyResponse.orders);
+
+        // Check local storage for user details and cart
+        const storedUserName = localStorage.getItem(`userName_${sessionId}`);
+        if (storedUserName) {
+          setUserName(storedUserName);
+          setUserNameSubmitted(true);
+        }
+
+        const storedCart = localStorage.getItem(`cart_${sessionId}`);
+        if (storedCart) {
+          setCart(JSON.parse(storedCart));
+        }
+      } catch (error) {
+        console.error("Failed to load initial data:", error);
+        toast.error("ไม่สามารถโหลดข้อมูลได้ กรุณาลองอีกครั้ง");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, [sessionId]);
 
   // Scroll detection for sticky tabs and active category
@@ -290,7 +138,10 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
 
       // Detect active category based on scroll position
       const categoryElements = Object.entries(categoryRefs.current);
-      let currentCategory = mockCategories[0].id;
+
+      if (categoryElements.length === 0 || categories.length === 0) return;
+
+      let currentCategory = categories[0].id;
 
       for (const [categoryId, element] of categoryElements) {
         if (element) {
@@ -311,10 +162,12 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [categories]);
 
   // Intersection Observer for better category detection
   useEffect(() => {
+    if (categories.length === 0) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -337,7 +190,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [categories]);
 
   const handleSubmitUserName = () => {
     if (userName.trim()) {
@@ -346,7 +199,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   };
 
-  const handleOpenItemDialog = (item: any) => {
+  const handleOpenItemDialog = (item: MenuItem) => {
     setSelectedItem(item);
     setItemQuantity(1);
     setItemNote("");
@@ -360,7 +213,8 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
       (cartItem) => cartItem.id === selectedItem.id
     );
 
-    let newCart;
+    let newCart: CartItem[];
+
     if (existingItemIndex >= 0) {
       newCart = [...cart];
       newCart[existingItemIndex] = {
@@ -369,10 +223,12 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         note: itemNote || newCart[existingItemIndex].note,
       };
     } else {
-      newCart = [
-        ...cart,
-        { ...selectedItem, quantity: itemQuantity, note: itemNote },
-      ];
+      const cartItem: CartItem = {
+        ...selectedItem,
+        quantity: itemQuantity,
+        note: itemNote,
+      };
+      newCart = [...cart, cartItem];
     }
 
     setCart(newCart);
@@ -384,12 +240,13 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     });
   };
 
-  const addToCart = (item: any) => {
+  const addToCart = (item: MenuItem) => {
     const existingItemIndex = cart.findIndex(
       (cartItem) => cartItem.id === item.id
     );
 
-    let newCart;
+    let newCart: CartItem[];
+
     if (existingItemIndex >= 0) {
       newCart = [...cart];
       newCart[existingItemIndex] = {
@@ -397,7 +254,12 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         quantity: newCart[existingItemIndex].quantity + 1,
       };
     } else {
-      newCart = [...cart, { ...item, quantity: 1, note: "" }];
+      const cartItem: CartItem = {
+        ...item,
+        quantity: 1,
+        note: "",
+      };
+      newCart = [...cart, cartItem];
     }
 
     setCart(newCart);
@@ -442,83 +304,44 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   };
 
-  const submitOrder = () => {
+  const submitOrder = async () => {
     if (cart.length === 0) return;
 
-    // Create new order
-    const newOrder = {
-      id: `order_${Date.now()}`,
-      items: [...cart],
-      status: "pending",
-      total: calculateTotal(),
-      createdAt: new Date().toISOString(),
-      userName,
-    };
+    try {
+      const orderRequest: SubmitOrderRequest = {
+        items: cart,
+        total: calculateTotal(),
+        userName,
+        sessionId,
+      };
 
-    // Add to order history
-    const updatedHistory = [newOrder, ...orderHistory];
-    setOrderHistory(updatedHistory);
-    localStorage.setItem(
-      `orderHistory_${sessionId}`,
-      JSON.stringify(updatedHistory)
-    );
+      const response = await orderService.submitOrder(orderRequest);
 
-    // Clear cart
-    setCart([]);
-    localStorage.setItem(`cart_${sessionId}`, JSON.stringify([]));
+      // Update order history
+      setOrderHistory([response.order, ...orderHistory]);
 
-    // Close cart dialog
-    setCartDialogOpen(false);
+      // Clear cart
+      setCart([]);
+      localStorage.setItem(`cart_${sessionId}`, JSON.stringify([]));
 
-    // Show toast notification
-    toast.success("สั่งอาหารเรียบร้อย", {
-      description: "ระบบได้รับออร์เดอร์ของคุณแล้ว",
-    });
+      // Close cart dialog
+      setCartDialogOpen(false);
 
-    // Simulate order status updates
-    setTimeout(() => {
-      const updatedHistory = [...orderHistory];
-      const orderIndex = updatedHistory.findIndex(
-        (order) => order.id === newOrder.id
-      );
-      if (orderIndex >= 0) {
-        updatedHistory[orderIndex] = {
-          ...updatedHistory[orderIndex],
-          status: "preparing",
-        };
-        setOrderHistory(updatedHistory);
-        localStorage.setItem(
-          `orderHistory_${sessionId}`,
-          JSON.stringify(updatedHistory)
-        );
-      }
-
-      // Simulate served status after another 10 seconds
-      setTimeout(() => {
-        const updatedHistory = [...orderHistory];
-        const orderIndex = updatedHistory.findIndex(
-          (order) => order.id === newOrder.id
-        );
-        if (orderIndex >= 0) {
-          updatedHistory[orderIndex] = {
-            ...updatedHistory[orderIndex],
-            status: "served",
-          };
-          setOrderHistory(updatedHistory);
-          localStorage.setItem(
-            `orderHistory_${sessionId}`,
-            JSON.stringify(updatedHistory)
-          );
-        }
-      }, 10000);
-    }, 5000);
+      // Show toast notification
+      toast.success("สั่งอาหารเรียบร้อย", {
+        description: "ระบบได้รับออร์เดอร์ของคุณแล้ว",
+      });
+    } catch (error) {
+      console.error("Failed to submit order:", error);
+      toast.error("เกิดข้อผิดพลาดในการสั่งอาหาร กรุณาลองอีกครั้ง");
+    }
   };
 
-  const calculateTotal = () => {
+  const calculateTotal = (): number => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const getTimeAgo = (dateString: string) => {
+  const getTimeAgo = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -529,7 +352,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     return `${diffMins} นาทีที่แล้ว`;
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: OrderStatus): string => {
     switch (status) {
       case "pending":
         return "รอรับออร์เดอร์";
@@ -542,7 +365,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: OrderStatus): string => {
     switch (status) {
       case "pending":
         return "bg-amber-500 hover:bg-amber-600 text-white";
@@ -590,20 +413,26 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   };
 
-  const filteredMenuItems = mockMenuItems.filter(
-    (item) =>
-      searchQuery === "" ||
-      item.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+
+    try {
+      const response = await orderService.searchMenuItems(query);
+      setMenuItems(response.items);
+    } catch (error) {
+      console.error("Failed to search menu items:", error);
+    }
+  };
 
   // Group items by category
-  const groupedMenuItems = mockCategories.reduce((acc, category) => {
-    acc[category.id] = filteredMenuItems.filter(
+  const groupedMenuItems = categories.reduce((acc, category) => {
+    acc[category.id] = menuItems.filter(
       (item) => item.categoryId === category.id
     );
     return acc;
-  }, {} as { [key: string]: typeof mockMenuItems });
+  }, {} as { [key: string]: MenuItem[] });
 
+  // Center active category in tabs
   useEffect(() => {
     if (categoryTabsRef.current && activeCategory) {
       const activeButton = categoryTabsRef.current.querySelector(
@@ -624,14 +453,19 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   }, [activeCategory]);
 
-  if (!session) {
+  // Loading state
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <p className="text-gray-600 dark:text-gray-400">กำลังโหลด...</p>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin h-10 w-10 border-4 border-gray-300 dark:border-gray-700 rounded-full border-t-gray-900 dark:border-t-gray-100 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูล...</p>
+        </div>
       </div>
     );
   }
 
+  // User name input screen
   if (!userNameSubmitted) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -690,7 +524,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
                   น้ำเต้าหู้พัทลุง
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {session.branchName} - {session.tableName}
+                  {session?.branchName} - {session?.tableName}
                 </p>
               </div>
             </div>
@@ -744,7 +578,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
                 placeholder="ค้นหาเมนู..."
                 className="pl-10 border-gray-300 dark:border-gray-600 focus:border-gray-900 dark:focus:border-gray-100"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearch(e.target.value)}
               />
             </div>
 
@@ -762,7 +596,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
                   className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto"
                   ref={categoryTabsRef}
                 >
-                  {mockCategories.map((category) => {
+                  {categories.map((category) => {
                     const IconComponent = category.icon;
                     const isActive = activeCategory === category.id;
                     const itemCount =
@@ -804,7 +638,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
 
             {/* Menu Items by Category */}
             <div className={`${isTabsSticky ? "mt-16" : ""} space-y-8`}>
-              {mockCategories.map((category) => {
+              {categories.map((category) => {
                 const categoryItems = groupedMenuItems[category.id] || [];
                 const IconComponent = category.icon;
 
@@ -813,7 +647,9 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
                 return (
                   <div
                     key={category.id}
-                    ref={(el) => (categoryRefs.current[category.id] = el)}
+                    ref={(el) => {
+                      categoryRefs.current[category.id] = el;
+                    }}
                     data-category-id={category.id}
                     className="scroll-mt-32"
                   >
@@ -874,7 +710,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
               })}
 
               {/* No Results */}
-              {filteredMenuItems.length === 0 && (
+              {menuItems.length === 0 && (
                 <div className="col-span-full py-16 text-center">
                   <Coffee className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                   <p className="text-gray-500 dark:text-gray-400 text-lg">
@@ -926,7 +762,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {order.items.map((item: any) => (
+                        {order.items.map((item) => (
                           <div
                             key={item.id}
                             className="flex justify-between items-start"
@@ -964,7 +800,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         </Tabs>
       </main>
 
-      {/* Item Detail Dialog - ปรับปรุงลำดับและ UI */}
+      {/* Item Detail Dialog */}
       <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] bg-white dark:bg-gray-900 border-0 shadow-2xl">
           {selectedItem && (
@@ -1087,7 +923,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Cart Dialog - ปรับปรุงการแสดงผล */}
+      {/* Cart Dialog */}
       <Dialog open={cartDialogOpen} onOpenChange={setCartDialogOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] bg-white dark:bg-gray-900 border-0 shadow-2xl">
           <DialogHeader className="text-center">
@@ -1103,7 +939,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
             <>
               <ScrollArea className="max-h-[50vh] custom-scrollbar">
                 <div className="space-y-4 pr-2">
-                  {cart.map((item, index) => (
+                  {cart.map((item) => (
                     <div
                       key={item.id}
                       className="py-4 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
