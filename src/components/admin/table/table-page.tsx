@@ -10,8 +10,8 @@ import {
   NewQueueInput,
 } from "@/interfaces/table.interface";
 import { tableService } from "@/services/table.service";
-import { TableQrCodeDialog } from "./table-qrcode-dialog";
-import { TableDetailDialog } from "./table-detail-dialog";
+import { TableQrCodeDialog } from "./dialogs/table-qrcode-dialog";
+import { TableDetailDialog } from "./dialogs/table-detail-dialog";
 import { TableManagement } from "./tabs/table-management";
 import { QueueManagement } from "./tabs/queue-management";
 

@@ -12,31 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  MinusCircle,
-  PlusCircle,
-  ShoppingCart,
-  Store,
-  X,
-  Check,
-  History,
-  Search,
-  Coffee,
-} from "lucide-react";
-import Image from "next/image";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
+import { ShoppingCart } from "lucide-react";
 import { toast, Toaster } from "sonner";
 import { orderService } from "@/services/order.service";
 import {
@@ -48,6 +24,12 @@ import {
   SessionData,
   SubmitOrderRequest,
 } from "@/interfaces/order.interface";
+
+// นำเข้าคอมโพเนนต์ย่อย
+import { OrderHeader } from "./order-header";
+import { OrderContent } from "./order-content";
+import { OrderMenuDialog } from "./dialogs/order-menu-dialog";
+import { OrderCartDialog } from "./dialogs/order-cart-dialog";
 
 interface OrderPageProps {
   sessionId: string;
@@ -192,6 +174,27 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     return () => observer.disconnect();
   }, [categories]);
 
+  // Center active category in tabs
+  useEffect(() => {
+    if (categoryTabsRef.current && activeCategory) {
+      const activeButton = categoryTabsRef.current.querySelector(
+        `[data-category="${activeCategory}"]`
+      ) as HTMLElement;
+      if (activeButton) {
+        const container = categoryTabsRef.current;
+        const containerWidth = container.offsetWidth;
+        const buttonLeft = activeButton.offsetLeft;
+        const buttonWidth = activeButton.offsetWidth;
+
+        const scrollLeft = buttonLeft - containerWidth / 2 + buttonWidth / 2;
+        container.scrollTo({
+          left: scrollLeft,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [activeCategory]);
+
   const handleSubmitUserName = () => {
     if (userName.trim()) {
       localStorage.setItem(`userName_${sessionId}`, userName);
@@ -240,7 +243,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     });
   };
 
-  const addToCart = (item: MenuItem) => {
+  const addToCart = (item: CartItem) => {
     const existingItemIndex = cart.findIndex(
       (cartItem) => cartItem.id === item.id
     );
@@ -368,15 +371,34 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
   const getStatusColor = (status: OrderStatus): string => {
     switch (status) {
       case "pending":
-        return "bg-amber-500 hover:bg-amber-600 text-white";
+        return "bg-[var(--chart-4)] text-primary-foreground";
       case "preparing":
-        return "bg-blue-500 hover:bg-blue-600 text-white";
+        return "bg-[var(--chart-2)] text-primary-foreground";
       case "served":
-        return "bg-green-500 hover:bg-green-600 text-white";
+        return "bg-[var(--chart-3)] text-primary-foreground";
       default:
         return "";
     }
   };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+
+    try {
+      const response = await orderService.searchMenuItems(query);
+      setMenuItems(response.items);
+    } catch (error) {
+      console.error("Failed to search menu items:", error);
+    }
+  };
+
+  // Group items by category
+  const groupedMenuItems = categories.reduce((acc, category) => {
+    acc[category.id] = menuItems.filter(
+      (item) => item.categoryId === category.id
+    );
+    return acc;
+  }, {} as { [key: string]: MenuItem[] });
 
   const scrollToCategory = (categoryId: string) => {
     const element = categoryRefs.current[categoryId];
@@ -413,53 +435,13 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   };
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-
-    try {
-      const response = await orderService.searchMenuItems(query);
-      setMenuItems(response.items);
-    } catch (error) {
-      console.error("Failed to search menu items:", error);
-    }
-  };
-
-  // Group items by category
-  const groupedMenuItems = categories.reduce((acc, category) => {
-    acc[category.id] = menuItems.filter(
-      (item) => item.categoryId === category.id
-    );
-    return acc;
-  }, {} as { [key: string]: MenuItem[] });
-
-  // Center active category in tabs
-  useEffect(() => {
-    if (categoryTabsRef.current && activeCategory) {
-      const activeButton = categoryTabsRef.current.querySelector(
-        `[data-category="${activeCategory}"]`
-      ) as HTMLElement;
-      if (activeButton) {
-        const container = categoryTabsRef.current;
-        const containerWidth = container.offsetWidth;
-        const buttonLeft = activeButton.offsetLeft;
-        const buttonWidth = activeButton.offsetWidth;
-
-        const scrollLeft = buttonLeft - containerWidth / 2 + buttonWidth / 2;
-        container.scrollTo({
-          left: scrollLeft,
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [activeCategory]);
-
   // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center">
-          <div className="animate-spin h-10 w-10 border-4 border-gray-300 dark:border-gray-700 rounded-full border-t-gray-900 dark:border-t-gray-100 mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">กำลังโหลดข้อมูล...</p>
+          <div className="animate-spin h-10 w-10 border-4 border-muted rounded-full border-t-primary mb-4"></div>
+          <p className="text-muted-foreground">กำลังโหลดข้อมูล...</p>
         </div>
       </div>
     );
@@ -468,22 +450,19 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
   // User name input screen
   if (!userNameSubmitted) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-white dark:bg-gray-800">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-br from-background to-muted">
+        <Card className="w-full max-w-md shadow-2xl border-0 bg-card">
           <CardHeader className="text-center pb-6">
-            <CardTitle className="text-2xl font-light text-gray-900 dark:text-gray-100">
+            <CardTitle className="text-2xl font-light text-card-foreground">
               ยินดีต้อนรับ
             </CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-400">
+            <CardDescription>
               กรุณาระบุชื่อของคุณเพื่อเริ่มสั่งอาหาร
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label
-                htmlFor="user-name"
-                className="text-gray-700 dark:text-gray-300"
-              >
+              <Label htmlFor="user-name" className="text-foreground">
                 ชื่อของคุณ
               </Label>
               <Input
@@ -491,13 +470,13 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
                 placeholder="กรุณาระบุชื่อ"
                 value={userName}
                 onChange={(e) => setUserName(e.target.value)}
-                className="border-gray-300 dark:border-gray-600 focus:border-gray-900 dark:focus:border-gray-100"
+                className="border-input focus:border-ring"
               />
             </div>
           </CardContent>
           <CardFooter>
             <Button
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
               onClick={handleSubmitUserName}
               disabled={!userName.trim()}
             >
@@ -510,540 +489,74 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
+    <div className="min-h-screen bg-background pb-20">
       <Toaster position="top-center" richColors />
 
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Store className="h-6 w-6 text-gray-900 dark:text-gray-100 mr-3" />
-              <div>
-                <h1 className="text-lg font-light text-gray-900 dark:text-gray-100">
-                  น้ำเต้าหู้พัทลุง
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {session?.branchName} - {session?.tableName}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Badge
-                variant="outline"
-                className="bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-              >
-                {userName}
-              </Badge>
-              {cart.length > 0 && (
-                <Button
-                  size="sm"
-                  className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300"
-                  onClick={() => setCartDialogOpen(true)}
-                >
-                  <ShoppingCart className="h-4 w-4 mr-1" />
-                  {cart.length}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Header Component */}
+      <OrderHeader
+        session={session}
+        userName={userName}
+        cart={cart}
+        setCartDialogOpen={setCartDialogOpen}
+      />
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="w-full bg-gray-100 dark:bg-gray-800 border-0">
-            <TabsTrigger
-              value="menu"
-              className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              เมนู
-            </TabsTrigger>
-            <TabsTrigger
-              value="history"
-              className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700"
-            >
-              <History className="h-4 w-4 mr-2" />
-              ประวัติการสั่ง
-            </TabsTrigger>
-          </TabsList>
+      {/* Content Component */}
+      <OrderContent
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        searchQuery={searchQuery}
+        handleSearch={handleSearch}
+        isTabsSticky={isTabsSticky}
+        tabsRef={tabsRef}
+        searchRef={searchRef}
+        categoryTabsRef={categoryTabsRef}
+        categories={categories}
+        activeCategory={activeCategory}
+        groupedMenuItems={groupedMenuItems}
+        categoryRefs={categoryRefs}
+        scrollToCategory={scrollToCategory}
+        menuItems={menuItems}
+        handleOpenItemDialog={handleOpenItemDialog}
+        orderHistory={orderHistory}
+        getTimeAgo={getTimeAgo}
+        getStatusText={getStatusText}
+        getStatusColor={getStatusColor}
+      />
 
-          <TabsContent value="menu" className="mt-6">
-            {/* Search Bar */}
-            <div ref={searchRef} className="relative mb-6">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                placeholder="ค้นหาเมนู..."
-                className="pl-10 border-gray-300 dark:border-gray-600 focus:border-gray-900 dark:focus:border-gray-100"
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
+      {/* Menu Dialog Component */}
+      <OrderMenuDialog
+        selectedItem={selectedItem}
+        itemDialogOpen={itemDialogOpen}
+        setItemDialogOpen={setItemDialogOpen}
+        itemQuantity={itemQuantity}
+        setItemQuantity={setItemQuantity}
+        itemNote={itemNote}
+        setItemNote={setItemNote}
+        handleAddItemToCart={handleAddItemToCart}
+      />
 
-            {/* Sticky Category Tabs */}
-            <div
-              ref={tabsRef}
-              className={`${
-                isTabsSticky
-                  ? "fixed top-[73px] left-0 right-0 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 shadow-sm"
-                  : "relative"
-              } transition-all duration-300`}
-            >
-              <div className="container mx-auto px-4 py-3">
-                <div
-                  className="flex space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 overflow-x-auto"
-                  ref={categoryTabsRef}
-                >
-                  {categories.map((category) => {
-                    const IconComponent = category.icon;
-                    const isActive = activeCategory === category.id;
-                    const itemCount =
-                      groupedMenuItems[category.id]?.length || 0;
-
-                    return (
-                      <button
-                        key={category.id}
-                        data-category={category.id}
-                        onClick={() => scrollToCategory(category.id)}
-                        className={`
-                          relative flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap
-                          ${
-                            isActive
-                              ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm"
-                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-white/50 dark:hover:bg-gray-700/50"
-                          }
-                        `}
-                      >
-                        {isActive && (
-                          <div className="w-full absolute bottom-0 left-1/2 transform -translate-x-1/2 w-8 h-0.5 bg-gray-900 dark:bg-gray-100 rounded-full" />
-                        )}
-                        <IconComponent className="mr-2 h-4 w-4" />
-                        {category.name}
-                        {itemCount > 0 && (
-                          <Badge
-                            variant="secondary"
-                            className="ml-2 h-5 px-1.5 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300"
-                          >
-                            {itemCount}
-                          </Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Menu Items by Category */}
-            <div className={`${isTabsSticky ? "mt-16" : ""} space-y-8`}>
-              {categories.map((category) => {
-                const categoryItems = groupedMenuItems[category.id] || [];
-                const IconComponent = category.icon;
-
-                if (categoryItems.length === 0) return null;
-
-                return (
-                  <div
-                    key={category.id}
-                    ref={(el) => {
-                      categoryRefs.current[category.id] = el;
-                    }}
-                    data-category-id={category.id}
-                    className="scroll-mt-32"
-                  >
-                    {/* Category Header */}
-                    <div className="flex items-center mb-6 pb-3 border-b border-gray-200 dark:border-gray-700">
-                      <IconComponent className="h-6 w-6 text-gray-700 dark:text-gray-300 mr-3" />
-                      <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-                        {category.name}
-                      </h2>
-                      <Badge
-                        variant="outline"
-                        className="ml-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                      >
-                        {categoryItems.length} รายการ
-                      </Badge>
-                    </div>
-
-                    {/* Category Items Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {categoryItems.map((item) => (
-                        <Card
-                          key={item.id}
-                          className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg bg-white dark:bg-gray-800 animate-fade-in"
-                          onClick={() => handleOpenItemDialog(item)}
-                        >
-                          <div className="relative h-48 w-full overflow-hidden">
-                            <Image
-                              src={item.imageUrl || "/placeholder.svg"}
-                              alt={item.name}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                          <CardHeader className="pb-2">
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg font-light text-gray-900 dark:text-gray-100">
-                                {item.name}
-                              </CardTitle>
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                ฿{item.price}
-                              </span>
-                            </div>
-                            <CardDescription className="line-clamp-2 text-gray-600 dark:text-gray-400">
-                              {item.description}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardFooter className="pt-0">
-                            <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300">
-                              <ShoppingCart className="mr-2 h-4 w-4" />
-                              เพิ่มลงตะกร้า
-                            </Button>
-                          </CardFooter>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* No Results */}
-              {menuItems.length === 0 && (
-                <div className="col-span-full py-16 text-center">
-                  <Coffee className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    ไม่พบเมนูที่ค้นหา
-                  </p>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history" className="mt-6">
-            <h2 className="text-2xl font-light mb-6 text-gray-900 dark:text-gray-100">
-              ประวัติการสั่งอาหาร
-            </h2>
-
-            {orderHistory.length === 0 ? (
-              <Card className="bg-white dark:bg-gray-800 border-0 shadow-lg">
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <History className="h-16 w-16 text-gray-400 mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400 text-lg">
-                    ยังไม่มีประวัติการสั่งอาหาร
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {orderHistory.map((order) => (
-                  <Card
-                    key={order.id}
-                    className="bg-white dark:bg-gray-800 border-0 shadow-lg"
-                  >
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-center">
-                        <CardTitle className="text-lg font-light text-gray-900 dark:text-gray-100">
-                          ออร์เดอร์ {getTimeAgo(order.createdAt)}
-                        </CardTitle>
-                        <Badge
-                          variant="outline"
-                          className={`border-0 font-medium ${getStatusColor(
-                            order.status
-                          )}`}
-                        >
-                          {getStatusText(order.status)}
-                        </Badge>
-                      </div>
-                      <CardDescription className="text-gray-600 dark:text-gray-400">
-                        สั่งโดย: {order.userName}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {order.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex justify-between items-start"
-                          >
-                            <div>
-                              <span className="font-medium text-gray-900 dark:text-gray-100">
-                                {item.name}
-                              </span>
-                              <span className="text-sm text-gray-500 ml-2">
-                                x{item.quantity}
-                              </span>
-                              {item.note && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  หมายเหตุ: {item.note}
-                                </p>
-                              )}
-                            </div>
-                            <span className="font-medium text-gray-900 dark:text-gray-100">
-                              ฿{item.price * item.quantity}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <Separator className="my-4" />
-                      <div className="flex justify-between font-semibold text-lg">
-                        <span>รวมทั้งสิ้น</span>
-                        <span>฿{order.total}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </main>
-
-      {/* Item Detail Dialog */}
-      <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] bg-white dark:bg-gray-900 border-0 shadow-2xl">
-          {selectedItem && (
-            <>
-              <DialogHeader className="text-center">
-                <DialogTitle className="text-2xl font-light text-gray-900 dark:text-gray-100">
-                  {selectedItem.name}
-                </DialogTitle>
-                <DialogDescription className="text-lg font-semibold text-gray-600 dark:text-gray-400">
-                  ฿{selectedItem.price}
-                </DialogDescription>
-              </DialogHeader>
-
-              <ScrollArea className="max-h-[50vh] custom-scrollbar">
-                <div className="space-y-4 px-1">
-                  {/* รูปภาพ */}
-                  <div className="relative h-48 w-full rounded-xl overflow-hidden">
-                    <Image
-                      src={selectedItem.imageUrl || "/placeholder.svg"}
-                      alt={selectedItem.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-
-                  {/* คำอธิบายรูปภาพ */}
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed text-center">
-                    {selectedItem.description}
-                  </p>
-
-                  {/* หมายเหตุ */}
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="note"
-                      className="text-gray-700 dark:text-gray-300 font-medium"
-                    >
-                      หมายเหตุ
-                    </Label>
-                    <Textarea
-                      id="note"
-                      placeholder="เช่น ไม่ใส่น้ำแข็ง, หวานน้อย, เผ็ดน้อย"
-                      value={itemNote}
-                      onChange={(e) => setItemNote(e.target.value)}
-                      className="border-gray-300 dark:border-gray-600 focus:border-gray-900 dark:focus:border-gray-100 rounded-lg resize-none"
-                      rows={2}
-                    />
-                  </div>
-
-                  {/* จำนวน */}
-                  <div className="space-y-3">
-                    <Label className="text-gray-700 dark:text-gray-300 font-medium">
-                      จำนวน
-                    </Label>
-                    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          setItemQuantity(Math.max(1, itemQuantity - 1))
-                        }
-                        disabled={itemQuantity <= 1}
-                        className="h-8 w-8 rounded-full p-0 border-gray-300 dark:border-gray-600 hover:bg-gray-900 hover:text-white dark:hover:bg-gray-100 dark:hover:text-gray-900"
-                      >
-                        <MinusCircle className="h-4 w-4" />
-                      </Button>
-
-                      <div className="flex flex-col items-center">
-                        <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                          {itemQuantity}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          จำนวน
-                        </span>
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setItemQuantity(itemQuantity + 1)}
-                        className="h-8 w-8 rounded-full p-0 border-gray-300 dark:border-gray-600 hover:bg-gray-900 hover:text-white dark:hover:bg-gray-100 dark:hover:text-gray-900"
-                      >
-                        <PlusCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* ราคารวม */}
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-center">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          ราคารวม
-                        </span>
-                        <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                          ฿{selectedItem.price * itemQuantity}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
-
-              <DialogFooter className="flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <Button
-                  variant="outline"
-                  onClick={() => setItemDialogOpen(false)}
-                  className="flex-1 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  ยกเลิก
-                </Button>
-                <Button
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300 rounded-lg"
-                  onClick={handleAddItemToCart}
-                >
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  เพิ่มลงตะกร้า
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Cart Dialog */}
-      <Dialog open={cartDialogOpen} onOpenChange={setCartDialogOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] bg-white dark:bg-gray-900 border-0 shadow-2xl">
-          <DialogHeader className="text-center">
-            <DialogTitle className="text-2xl font-light text-gray-900 dark:text-gray-100">
-              รายการสั่งซื้อ
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">
-              รายการอาหารที่คุณเลือก ({cart.length} รายการ)
-            </DialogDescription>
-          </DialogHeader>
-
-          {cart.length > 0 ? (
-            <>
-              <ScrollArea className="max-h-[50vh] custom-scrollbar">
-                <div className="space-y-4 pr-2">
-                  {cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="py-4 border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                    >
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-medium text-gray-900 dark:text-gray-100 text-lg">
-                            {item.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            ฿{item.price} × {item.quantity} = ฿
-                            {item.price * item.quantity}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Quantity Controls in Cart */}
-                      <div className="flex items-center justify-center space-x-4 bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-3">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 rounded-full border-gray-300 dark:border-gray-600 hover:bg-gray-900 hover:text-white dark:hover:bg-gray-100 dark:hover:text-gray-900"
-                          onClick={() => removeFromCart(item.id)}
-                        >
-                          <MinusCircle className="h-4 w-4" />
-                        </Button>
-                        <span className="w-12 text-center font-medium text-lg">
-                          {item.quantity}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 rounded-full border-gray-300 dark:border-gray-600 hover:bg-gray-900 hover:text-white dark:hover:bg-gray-100 dark:hover:text-gray-900"
-                          onClick={() => addToCart(item)}
-                        >
-                          <PlusCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      <Input
-                        placeholder="หมายเหตุ เช่น ไม่ใส่น้ำแข็ง, หวานน้อย"
-                        value={item.note}
-                        onChange={(e) =>
-                          updateCartItemNote(item.id, e.target.value)
-                        }
-                        className="text-sm border-2 border-gray-300 dark:border-gray-600 focus:border-gray-900 dark:focus:border-gray-100 rounded-xl"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center font-semibold text-xl">
-                  <span>รวมทั้งสิ้น</span>
-                  <span className="text-2xl">฿{calculateTotal()}</span>
-                </div>
-              </div>
-
-              <DialogFooter className="flex gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setCartDialogOpen(false)}
-                  className="flex-1 border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl py-3"
-                >
-                  <X className="mr-2 h-4 w-4" />
-                  ยกเลิก
-                </Button>
-                <Button
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300 rounded-xl py-3"
-                  onClick={submitOrder}
-                >
-                  <Check className="mr-2 h-4 w-4" />
-                  ยืนยันการสั่ง
-                </Button>
-              </DialogFooter>
-            </>
-          ) : (
-            <div className="py-16 text-center">
-              <ShoppingCart className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-              <p className="text-gray-500 dark:text-gray-400 text-lg mb-6">
-                ไม่มีรายการในตะกร้า
-              </p>
-              <Button
-                className="bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 transition-all duration-300 rounded-xl px-8 py-3"
-                onClick={() => setCartDialogOpen(false)}
-              >
-                เลือกเมนู
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Cart Dialog Component */}
+      <OrderCartDialog
+        cart={cart}
+        cartDialogOpen={cartDialogOpen}
+        setCartDialogOpen={setCartDialogOpen}
+        removeFromCart={removeFromCart}
+        addToCart={addToCart}
+        updateCartItemNote={updateCartItemNote}
+        calculateTotal={calculateTotal}
+        submitOrder={submitOrder}
+      />
 
       {/* Floating Cart Button */}
       {cart.length > 0 && (
         <div className="fixed bottom-6 right-6 md:hidden">
           <Button
             size="lg"
-            className="rounded-full h-16 w-16 bg-gray-900 hover:bg-gray-800 text-white dark:bg-gray-100 dark:hover:bg-gray-200 dark:text-gray-900 shadow-2xl transition-all duration-300"
+            className="rounded-full h-16 w-16 bg-primary hover:bg-primary/90 text-primary-foreground shadow-2xl transition-all duration-300"
             onClick={() => setCartDialogOpen(true)}
           >
             <ShoppingCart className="h-6 w-6" />
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-sm font-medium">
+            <span className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full h-6 w-6 flex items-center justify-center text-sm font-medium">
               {cart.length}
             </span>
           </Button>
