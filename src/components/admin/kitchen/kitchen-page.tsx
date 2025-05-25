@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -10,97 +10,79 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Coffee, CheckCircle, ArrowRight } from "lucide-react";
+import {
+  Clock,
+  Coffee,
+  CheckCircle,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { kitchenService } from "@/services/kitchen.service";
+import { KitchenOrder, OrderStatus } from "@/interfaces/kitchen.interface";
 
 interface KitchenDisplayProps {
   branchId: string;
 }
 
-// Mock orders data
-const mockOrders = [
-  {
-    id: "order1",
-    tableId: "1",
-    tableName: "โต๊ะ 1",
-    customerName: "คุณสมชาย",
-    status: "pending",
-    createdAt: new Date(Date.now() - 5 * 60000).toISOString(), // 5 minutes ago
-    items: [
-      {
-        id: "item1",
-        name: "น้ำเต้าหู้ร้อน",
-        quantity: 2,
-        note: "หวานน้อย",
-        status: "pending",
-      },
-      {
-        id: "item4",
-        name: "ปาท่องโก๋",
-        quantity: 4,
-        note: "",
-        status: "pending",
-      },
-    ],
-  },
-  {
-    id: "order2",
-    tableId: "5",
-    tableName: "โต๊ะ 5",
-    customerName: "คุณนภา",
-    status: "preparing",
-    createdAt: new Date(Date.now() - 12 * 60000).toISOString(), // 12 minutes ago
-    items: [
-      {
-        id: "item2",
-        name: "น้ำเต้าหู้เย็น",
-        quantity: 1,
-        note: "ไม่ใส่น้ำแข็ง",
-        status: "preparing",
-      },
-      {
-        id: "item3",
-        name: "น้ำเต้าหู้ปั่น",
-        quantity: 1,
-        note: "",
-        status: "preparing",
-      },
-      {
-        id: "item5",
-        name: "ขนมไข่",
-        quantity: 2,
-        note: "",
-        status: "preparing",
-      },
-    ],
-  },
-  {
-    id: "order3",
-    tableId: "8",
-    tableName: "โต๊ะ 8",
-    customerName: "คุณวิชัย",
-    status: "served",
-    createdAt: new Date(Date.now() - 25 * 60000).toISOString(), // 25 minutes ago
-    items: [
-      {
-        id: "item1",
-        name: "น้ำเต้าหู้ร้อน",
-        quantity: 3,
-        note: "",
-        status: "served",
-      },
-      {
-        id: "item6",
-        name: "เต้าฮวยฟรุตสลัด",
-        quantity: 1,
-        note: "ไม่ใส่แตงโม",
-        status: "served",
-      },
-    ],
-  },
-];
-
 export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
-  const [orders, setOrders] = useState(mockOrders);
+  // State
+  const [orders, setOrders] = useState<KitchenOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Load orders on component mount
+  useEffect(() => {
+    async function loadOrders() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await kitchenService.getOrders({ branchId });
+        setOrders(response.orders);
+      } catch (err) {
+        console.error("Error loading kitchen orders:", err);
+        setError("ไม่สามารถโหลดข้อมูลออร์เดอร์ได้ กรุณาลองอีกครั้ง");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadOrders();
+
+    // Optional: Set up periodic polling for new orders
+    const pollInterval = setInterval(async () => {
+      try {
+        // Get the most recent order timestamp
+        if (orders.length > 0) {
+          const timestamps = orders.map((o) => new Date(o.createdAt).getTime());
+          const lastTimestamp = new Date(Math.max(...timestamps)).toISOString();
+
+          const response = await kitchenService.pollForNewOrders(
+            branchId,
+            lastTimestamp
+          );
+
+          if (response.orders.length > 0) {
+            // Merge new orders with existing ones
+            const newOrderIds = response.orders.map((o) => o.id);
+            const filteredOrders = orders.filter(
+              (o) => !newOrderIds.includes(o.id)
+            );
+
+            setOrders([...filteredOrders, ...response.orders]);
+          }
+        }
+      } catch (err) {
+        // Silent failure for polling - we don't want to interrupt the user
+        console.error("Polling error:", err);
+      }
+    }, 30000); // Poll every 30 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [branchId]);
 
   const getTimeAgo = (dateString: string) => {
     try {
@@ -113,50 +95,56 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
       if (diffMins === 1) return "1 นาทีที่แล้ว";
       return `${diffMins} นาทีที่แล้ว`;
     } catch (error) {
+      console.error("Invalid date format:", dateString, error);
       return "ไม่ทราบเวลา";
     }
   };
 
-  const handleCompleteItem = (orderId: string, itemId: string) => {
-    const updatedOrders = orders.map((order) => {
-      if (order.id === orderId) {
-        const updatedItems = order.items.map((item) => {
-          if (item.id === itemId) {
-            return { ...item, status: "served" };
-          }
-          return item;
-        });
+  const handleCompleteItem = async (orderId: string, itemId: string) => {
+    try {
+      setIsUpdating(true);
 
-        // Check if all items are served
-        const allServed = updatedItems.every(
-          (item) => item.status === "served"
-        );
+      const response = await kitchenService.updateOrderItemStatus(branchId, {
+        orderId,
+        itemId,
+        status: "served",
+      });
 
-        return {
-          ...order,
-          items: updatedItems,
-          status: allServed ? "served" : "preparing",
-        };
-      }
-      return order;
-    });
+      // Update local state with the updated order
+      const updatedOrders = orders.map((order) =>
+        order.id === orderId ? response.order : order
+      );
 
-    setOrders(updatedOrders);
+      setOrders(updatedOrders);
+    } catch (err) {
+      console.error("Failed to update item status:", err);
+      setError("ไม่สามารถอัปเดตสถานะรายการได้ กรุณาลองอีกครั้ง");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
-  const handleMoveOrder = (orderId: string, newStatus: string) => {
-    const updatedOrders = orders.map((order) => {
-      if (order.id === orderId) {
-        return {
-          ...order,
-          status: newStatus,
-          items: order.items.map((item) => ({ ...item, status: newStatus })),
-        };
-      }
-      return order;
-    });
+  const handleMoveOrder = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      setIsUpdating(true);
 
-    setOrders(updatedOrders);
+      const response = await kitchenService.updateOrderStatus(branchId, {
+        orderId,
+        status: newStatus,
+      });
+
+      // Update local state with the updated order
+      const updatedOrders = orders.map((order) =>
+        order.id === orderId ? response.order : order
+      );
+
+      setOrders(updatedOrders);
+    } catch (err) {
+      console.error("Failed to move order:", err);
+      setError("ไม่สามารถย้ายออร์เดอร์ได้ กรุณาลองอีกครั้ง");
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   // Filter orders by status
@@ -169,15 +157,15 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
   // Column rendering function
   const renderOrderColumn = (
     title: string,
-    statusOrders: typeof orders,
-    status: string,
-    nextStatus?: string
+    statusOrders: KitchenOrder[],
+    status: OrderStatus,
+    nextStatus?: OrderStatus
   ) => {
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-4 bg-white text-black p-3 rounded-t-md">
           <h3 className="font-semibold">{title}</h3>
-          <Badge variant="outline" className="bg-red-300 ">
+          <Badge variant="outline" className="bg-red-300">
             {statusOrders.length}
           </Badge>
         </div>
@@ -241,7 +229,7 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                               onClick={() =>
                                 handleCompleteItem(order.id, item.id)
                               }
-                              disabled={item.status === "served"}
+                              disabled={item.status === "served" || isUpdating}
                               className={
                                 item.status === "served" ? "bg-green-50" : ""
                               }
@@ -251,6 +239,8 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                                   <CheckCircle className="mr-1 h-4 w-4 text-green-500" />
                                   เสร็จแล้ว
                                 </>
+                              ) : isUpdating ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
                                 "เสร็จ"
                               )}
@@ -265,13 +255,17 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
                     <Button
                       className="w-full"
                       onClick={() => handleMoveOrder(order.id, nextStatus)}
+                      disabled={isUpdating}
                       style={{
                         backgroundColor:
                           status === "pending" ? "#f59e0b" : "#3b82f6",
                         color: "white",
                       }}
                     >
-                      {status === "pending" ? "ร  บออร์เดอร์" : "เสร็จทั้งหมด"}
+                      {isUpdating ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      {status === "pending" ? "รับออร์เดอร์" : "เสร็จทั้งหมด"}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </CardFooter>
@@ -284,6 +278,33 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" />
+        <p>กำลังโหลดข้อมูลออร์เดอร์...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+          <Button
+            variant="outline"
+            className="mt-2"
+            onClick={() => window.location.reload()}
+          >
+            ลองอีกครั้ง
+          </Button>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 h-full bg-gray-50">
       <div className="flex flex-col space-y-4 h-full">
@@ -293,6 +314,13 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
             จัดการออร์เดอร์และการเตรียมอาหาร
           </p>
         </div>
+
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-[calc(100vh-200px)]">
           <div className="bg-white rounded-md shadow p-3 flex flex-col">
