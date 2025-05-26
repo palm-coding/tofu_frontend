@@ -379,7 +379,6 @@ export function TableDisplay({ branchId }: TableManagementProps) {
               />
             </TabsContent>
           </Tabs>
-
           {/* QR Code Dialog */}
           <TableQrCodeDialog
             open={qrDialogOpen}

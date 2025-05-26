@@ -51,7 +51,7 @@ export function TableDetailDialog({
 }: TableDetailDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] bg-background border-0 shadow-2xl">
+      <DialogContent className="w-full min-w-[200px] max-w-[72rem] max-h-[90vh] mx-auto bg-background border-0 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-light text-foreground">
             รายละเอียด {selectedTable?.name || "โต๊ะ"}
@@ -64,7 +64,7 @@ export function TableDetailDialog({
 
         <ScrollArea className="max-h-[60vh] custom-scrollbar">
           <div className="p-2">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-[repeat(auto-fit,_minmax(250px,_1fr))] gap-6 mx-auto">
               {/* Left side - Order details */}
               <div className="space-y-6">
                 <h3 className="text-xl font-light text-foreground">

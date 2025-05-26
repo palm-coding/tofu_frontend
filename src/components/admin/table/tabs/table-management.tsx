@@ -116,11 +116,11 @@ export function TableManagement({
                   เช็คอิน
                 </Button>
               ) : (
-                <div className="w-full flex gap-2">
+                <div className="w-full flex flex-wrap gap-2 justify-between mx-auto">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1 border-red-300 text-red-700 hover:bg-red-600 hover:text-primary-foreground dark:border-red-600 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-all duration-300"
+                    className="flex-1 min-w-[120px] border-red-300 text-red-700 hover:bg-red-600 hover:text-primary-foreground dark:border-red-600 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-all duration-300"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOpenDetails(table);
@@ -129,10 +129,11 @@ export function TableManagement({
                     <Eye className="mr-2 h-4 w-4" />
                     รายละเอียด
                   </Button>
+
                   <Button
                     variant="outline"
                     size="sm"
-                    className="border-red-300 text-red-700 hover:bg-red-600 hover:text-primary-foreground dark:border-red-600 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-all duration-300"
+                    className="flex-1 min-w-[120px] border-red-300 text-red-700 hover:bg-red-600 hover:text-primary-foreground dark:border-red-600 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white transition-all duration-300"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleShowQR(table);
