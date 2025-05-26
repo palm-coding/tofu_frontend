@@ -51,7 +51,8 @@ export function TableDetailDialog({
 }: TableDetailDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full min-w-[200px] max-w-[72rem] max-h-[90vh] mx-auto bg-background border-0 shadow-2xl">
+      {/* เพิ่มความกว้างของ DialogContent และปรับ max-width ให้ใหญ่ขึ้น */}
+      <DialogContent className="w-full min-w-[200px] max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] mx-auto bg-background border-0 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-light text-foreground">
             รายละเอียด {selectedTable?.name || "โต๊ะ"}
@@ -64,7 +65,8 @@ export function TableDetailDialog({
 
         <ScrollArea className="max-h-[60vh] custom-scrollbar">
           <div className="p-2">
-            <div className="grid grid-cols-[repeat(auto-fit,_minmax(250px,_1fr))] gap-6 mx-auto">
+            {/* สำหรับ desktop ใช้ grid-cols-2 (ซ้าย-ขวา), สำหรับ md และเล็กกว่าใช้ grid-cols-1 (เรียงทีละส่วน) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-auto">
               {/* Left side - Order details */}
               <div className="space-y-6">
                 <h3 className="text-xl font-light text-foreground">
@@ -143,7 +145,8 @@ export function TableDetailDialog({
 
               {/* Right side - Payment and QR code */}
               <div className="space-y-6">
-                <div className="bg-muted dark:bg-muted/50 rounded-xl p-6">
+                {/* สรุปรายการ */}
+                <div className="bg-muted dark:bg-muted/50 rounded-xl mx-2">
                   <h3 className="text-xl font-light text-foreground mb-6">
                     สรุปรายการ
                   </h3>
@@ -195,10 +198,11 @@ export function TableDetailDialog({
                   </div>
                 </div>
 
+                {/* การชำระเงิน */}
                 <div className="bg-muted dark:bg-muted/50 rounded-xl p-6">
-                  <h3 className="text-xl font-light text-foreground mb-6">
+                  {/* <h3 className="text-xl font-light text-foreground mb-6">
                     การชำระเงิน
-                  </h3>
+                  </h3> */}
                   {isPaid ? (
                     <div className="text-center py-8">
                       <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
@@ -230,7 +234,7 @@ export function TableDetailDialog({
                           สแกน QR Code เพื่อชำระเงินด้วย PromptPay
                         </p>
                       </div>
-                      <div className="grid grid-cols-1 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
                         <Button
                           variant="outline"
                           onClick={onMarkAsPaid}

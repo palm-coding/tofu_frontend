@@ -153,26 +153,26 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
     switch (status) {
       case "pending":
         return {
-          borderColor: "var(--chart-4)",
+          borderColorClass: "border-amber-500 dark:border-amber-400",
           buttonClass:
-            "bg-[var(--chart-4)] text-primary-foreground hover:bg-[var(--chart-4)]/90",
+            "bg-amber-500 hover:bg-amber-600 dark:bg-amber-400 dark:hover:bg-amber-500 text-white",
         };
       case "preparing":
         return {
-          borderColor: "var(--chart-2)",
+          borderColorClass: "border-blue-500 dark:border-blue-400",
           buttonClass:
-            "bg-[var(--chart-2)] text-primary-foreground hover:bg-[var(--chart-2)]/90",
+            "bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 text-white",
         };
       case "served":
         return {
-          borderColor: "var(--chart-3)",
+          borderColorClass: "border-green-500 dark:border-green-400",
           buttonClass:
-            "bg-[var(--chart-3)] text-primary-foreground hover:bg-[var(--chart-3)]/90",
+            "bg-green-500 hover:bg-green-600 dark:bg-green-400 dark:hover:bg-green-500 text-white",
         };
       default:
         return {
-          borderColor: "var(--border)",
-          buttonClass: "bg-primary text-primary-foreground hover:bg-primary/90",
+          borderColorClass: "border-border",
+          buttonClass: "bg-primary hover:bg-primary/90 text-primary-foreground",
         };
     }
   };
@@ -191,13 +191,23 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
     status: OrderStatus,
     nextStatus?: OrderStatus
   ) => {
-    const { borderColor, buttonClass } = getOrderStatusColors(status);
+    const { borderColorClass, buttonClass } = getOrderStatusColors(status);
 
     return (
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between mb-4 bg-card text-card-foreground p-3 rounded-t-md">
           <h3 className="font-semibold">{title}</h3>
-          <Badge variant="outline" className="bg-red-300 text-accent-foreground">
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-white",
+              status === "pending"
+                ? "bg-amber-500 dark:bg-amber-400"
+                : status === "preparing"
+                ? "bg-blue-500 dark:bg-blue-400"
+                : "bg-green-500 dark:bg-green-400"
+            )}
+          >
             {statusOrders.length}
           </Badge>
         </div>
@@ -211,10 +221,10 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
             statusOrders.map((order) => (
               <Card
                 key={order.id}
-                className="border-l-4 shadow-sm hover:shadow-md transition-all duration-200"
-                style={{
-                  borderLeftColor: borderColor,
-                }}
+                className={cn(
+                  "border-0 border-l-4 shadow-sm hover:shadow-md transition-all duration-200",
+                  borderColorClass // เปลี่ยนจาก getOrderStatusColors(status).borderColor
+                )}
               >
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-center">
