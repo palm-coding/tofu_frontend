@@ -33,7 +33,7 @@ const mockMenuItems: MenuItem[] = [
     price: 25,
     categoryId: "cat1",
     isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
+    imageUrl: "/img/soy01.png",
   },
   {
     id: "item2",
@@ -42,7 +42,7 @@ const mockMenuItems: MenuItem[] = [
     price: 30,
     categoryId: "cat1",
     isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
+    imageUrl: "/img/soy02.jpg",
   },
   {
     id: "item3",
@@ -51,7 +51,7 @@ const mockMenuItems: MenuItem[] = [
     price: 35,
     categoryId: "cat1",
     isAvailable: true,
-    imageUrl: "/placeholder.svg?height=100&width=100",
+    imageUrl: "/img/soy03.jpg",
   },
   {
     id: "item4",
