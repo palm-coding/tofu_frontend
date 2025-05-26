@@ -135,7 +135,7 @@ export function DashboardDisplay({ branchId }: DashboardContentProps) {
             <TabsTrigger value="hourly">ยอดขายรายชั่วโมง</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" className="space-y-4 ">
             <Card>
               <CardHeader>
                 <CardTitle>ยอดขายประจำสัปดาห์</CardTitle>
@@ -179,7 +179,7 @@ export function DashboardDisplay({ branchId }: DashboardContentProps) {
                   ยอดขายรวมของร้านในแต่ละวันของสัปดาห์นี้
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-[300px]">
+              <CardContent className="h-[300px] ">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={salesData}

@@ -77,7 +77,7 @@ export default function BranchesDisplay() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 p-6">
+    <div className="min-h-screen bg-backgroud p-6">
       <div className="max-w-5xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-amber-800">
@@ -101,7 +101,7 @@ export default function BranchesDisplay() {
                 !branch.active ? "opacity-60" : ""
               }`}
             >
-              <CardHeader className="bg-amber-100">
+              <CardHeader className="bg-backgroud">
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <Store className="h-5 w-5" />
