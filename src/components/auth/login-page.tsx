@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -20,14 +18,14 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
-import { authService } from "@/services/auth.service";
-import { LoginRequest } from "@/interfaces/user.interface";
+
+// นำเข้า useAuth hook
+import { useAuth } from "@/hooks/useAuth";
 
 const formSchema = z.object({
   email: z.string().email({
@@ -39,9 +37,8 @@ const formSchema = z.object({
 });
 
 export function LoginPage() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  // ใช้ useAuth hook
+  const { login, error, loading } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,30 +50,12 @@ export function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const loginData: LoginRequest = {
-        email: values.email,
-        password: values.password,
-      };
-
-      const response = await authService.login(loginData);
-
-      // Store user info in localStorage
-      localStorage.setItem("user", JSON.stringify(response.user));
-
-      // Redirect based on role
-      if (response.user.role === "super_admin") {
-        router.push("/branches");
-      } else if (response.user.role === "branch_owner") {
-        router.push(`/${response.user.branchId}`);
-      }
+      // เรียกฟังก์ชัน login จาก useAuth
+      await login(values.email, values.password);
+      // ไม่ต้องจัดการ redirect เพราะ useAuth จัดการให้แล้ว
     } catch (err) {
-      console.error("Login error:", err);
-      setError("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-    } finally {
-      setIsLoading(false);
+      // Error handling จะถูกจัดการใน useAuth
+      console.error("Login submission error:", err);
     }
   }
 
@@ -125,10 +104,10 @@ export function LoginPage() {
             />
             <Button
               type="submit"
-              className="w-full bg-amber-600 hover:bg-amber-700"
-              disabled={isLoading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   กำลังเข้าสู่ระบบ...
@@ -140,13 +119,6 @@ export function LoginPage() {
           </form>
         </Form>
       </CardContent>
-      <CardFooter className="flex justify-center text-sm text-muted-foreground">
-        <div>
-          <p>ทดลองใช้งาน:</p>
-          <p>Super Admin: admin@tofupos.com / admin123</p>
-          <p>Branch Owner: branch1@tofupos.com / branch123</p>
-        </div>
-      </CardFooter>
     </Card>
   );
 }

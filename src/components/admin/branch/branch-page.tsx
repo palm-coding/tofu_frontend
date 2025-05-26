@@ -14,40 +14,23 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, Store } from "lucide-react";
 import { Branch } from "@/interfaces/branch.interface";
 import { branchService } from "@/services/branch.service";
-import { authService } from "@/services/auth.service";
-import { User } from "@/interfaces/user.interface";
+import { useAuth } from "@/hooks/useAuth"; // เปลี่ยนมาใช้ useAuth hook
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function BranchesDisplay() {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth(); // ใช้ user จาก useAuth แทน
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check authentication and load branches
+  // ใช้ useEffect เพื่อโหลดข้อมูลสาขา
   useEffect(() => {
-    async function loadData() {
+    async function loadBranches() {
       try {
-        // Check if user is logged in and has super_admin role
-        const storedUser = authService.getCurrentUser();
-
-        if (storedUser) {
-          setUser(storedUser);
-
-          // If user is not super_admin, redirect to their branch
-          if (storedUser.role !== "super_admin") {
-            router.push(`/${storedUser.branchId}`);
-            return;
-          }
-
-          // Fetch branches data from service
-          const { branches } = await branchService.getBranches();
-          setBranches(branches);
-        } else {
-          // If no user is logged in, redirect to login page
-          router.push("/");
-        }
+        setLoading(true);
+        const { branches } = await branchService.getBranches();
+        setBranches(branches);
       } catch (err) {
         console.error("Error loading branches:", err);
         setError("ไม่สามารถโหลดข้อมูลสาขาได้ กรุณาลองอีกครั้ง");
@@ -56,8 +39,14 @@ export default function BranchesDisplay() {
       }
     }
 
-    loadData();
-  }, [router]);
+    // ถ้ามี user และเป็น super_admin ให้โหลดข้อมูลสาขา
+    if (user && user.role === "super_admin") {
+      loadBranches();
+    } else if (user && user.role === "branch_owner" && user.branchId) {
+      // ถ้าเป็น branch_owner ให้ไปที่สาขาของตัวเอง
+      router.replace(`/${user.branchId}`);
+    }
+  }, [user, router]);
 
   const handleSelectBranch = (branchId: string) => {
     router.push(`/${branchId}`);
@@ -72,8 +61,14 @@ export default function BranchesDisplay() {
     );
   }
 
+  // ถ้าไม่ใช่ super_admin ไม่แสดงหน้านี้
   if (!user || user.role !== "super_admin") {
-    return null; // Will redirect in useEffect
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin mr-2" />
+        <p>กำลังตรวจสอบสิทธิ์...</p>
+      </div>
+    );
   }
 
   return (
@@ -101,6 +96,7 @@ export default function BranchesDisplay() {
                 !branch.active ? "opacity-60" : ""
               }`}
             >
+              {/* ส่วนที่เหลือของการ์ดยังเหมือนเดิม */}
               <CardHeader className="bg-backgroud">
                 <CardTitle className="flex items-center justify-between">
                   <span className="flex items-center gap-2">

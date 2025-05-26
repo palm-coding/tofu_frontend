@@ -16,7 +16,7 @@ import {
 // Mock branches data
 const mockBranches: Branch[] = [
   {
-    id: "branch1",
+    id: "683324ddf7a518cd81e53da2",
     name: "สาขาตลาดเมืองใหม่",
     address: "ตลาดเมืองใหม่ อ.เมือง จ.พัทลุง",
     contact: "074-123456",

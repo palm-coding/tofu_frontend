@@ -1,5 +1,5 @@
-// app/layout.tsx
 import { ThemeProvider } from "@/providers/theme-provider";
+import { AuthProvider } from "@/hooks/useAuth"; // เพิ่มการนำเข้า AuthProvider
 import "./globals.css";
 import { DM_Sans, Noto_Sans_Thai } from "next/font/google";
 import { Toaster } from "sonner";
@@ -27,18 +27,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    // suppressHydrationWarning silences mismatch complaints on <html>
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${notoSansThai.variable} font-sans`}>
-        {/* Move your ThemeProvider here so its script to set the
-            class on <html> runs before hydration */}
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          {/* เพิ่ม AuthProvider ครอบ children เพื่อให้ทุกหน้าเข้าถึง Context ได้ */}
+          <AuthProvider>{children}</AuthProvider>
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>

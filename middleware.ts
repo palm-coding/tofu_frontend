@@ -1,21 +1,20 @@
 // import { NextResponse } from "next/server";
 // import type { NextRequest } from "next/server";
 
+// // ทดสอบ middleware อย่างเรียบง่าย
 // export function middleware(request: NextRequest) {
-//   // ป้องกันเส้นทาง admin
-//   if (request.nextUrl.pathname.startsWith("/dashboard")) {
-//     // ตรวจสอบการเข้าสู่ระบบจาก token หรือ session
-//     const isAuthenticated = request.cookies.has("auth_token");
+//   console.log("SIMPLE MIDDLEWARE RUNNING", request.nextUrl.pathname);
 
-//     if (!isAuthenticated) {
-//       // ถ้ายังไม่ได้ login ให้ redirect ไปหน้า login
-//       return NextResponse.redirect(new URL("/login", request.url));
-//     }
+//   // ถ้าเป็นเส้นทาง /branches ให้ redirect ไปที่ /login
+//   if (request.nextUrl.pathname === "/branches") {
+//     console.log("REDIRECT TO LOGIN");
+//     return NextResponse.redirect(new URL("/login", request.url));
 //   }
 
 //   return NextResponse.next();
 // }
 
+// // ระบุ matcher อย่างเฉพาะเจาะจง
 // export const config = {
-//   matcher: ["/dashboard/:path*"],
+//   matcher: ["/branches"],
 // };

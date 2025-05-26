@@ -8,7 +8,7 @@ import { BranchMobileMenu } from "./branch-mobile-menu";
 import { BranchContent } from "./branch-content";
 import { BranchFooter } from "./branch-footer";
 import { Branch } from "@/interfaces/branch.interface";
-import { User } from "@/interfaces/user.interface";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BranchLayoutProps {
   children: React.ReactNode;
@@ -18,7 +18,7 @@ interface BranchLayoutProps {
 // Mock branches data
 const mockBranches: Branch[] = [
   {
-    id: "branch1",
+    id: "683324ddf7a518cd81e53da2",
     name: "สาขาตลาดเมืองใหม่",
     address: "ตลาดเมืองใหม่",
     contact: "074-123456",
@@ -39,7 +39,7 @@ const mockBranches: Branch[] = [
 
 export function BranchLayout({ children, branchId }: BranchLayoutProps) {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const { user, logout, loading } = useAuth();
   const [branch, setBranch] = useState<Branch | null>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -47,41 +47,44 @@ export function BranchLayout({ children, branchId }: BranchLayoutProps) {
   useEffect(() => {
     setMounted(true);
 
-    // Check if user is logged in
-    const storedUser = localStorage.getItem("user");
-    if (!storedUser) {
-      router.push("/");
-      return;
-    }
-
-    const parsedUser = JSON.parse(storedUser) as User;
-    setUser(parsedUser);
-
-    // Check if user has access to this branch
-    if (
-      parsedUser.role === "branch_owner" &&
-      parsedUser.branchId !== branchId
-    ) {
-      router.push(`/${parsedUser.branchId}`);
-      return;
-    }
-
     // Find branch details
     const branchDetails = mockBranches.find((b) => b.id === branchId);
     if (branchDetails) {
       setBranch(branchDetails);
     }
-  }, [branchId, router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    router.push("/");
+    // Check if user has access to this branch
+    if (user && user.role === "branch_owner" && user.branchId !== branchId) {
+      router.push(`/${user.branchId}`);
+      return;
+    }
+  }, [branchId, router, user]);
+
+  const handleLogout = async () => {
+    await logout(); // ใช้ logout function จาก useAuth
+    // useAuth จะจัดการ redirect ให้อัตโนมัติ
   };
 
-  if (!user || !branch || !mounted) {
+  // กำลังโหลดข้อมูล หรือยังไม่พร้อมแสดงผล
+  if (loading || !mounted || !branch) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <p className="text-gray-600 dark:text-gray-400"></p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin h-10 w-10 border-4 border-muted rounded-full border-t-primary mb-4"></div>
+          <p className="text-muted-foreground">กำลังโหลด...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ไม่มีข้อมูลผู้ใช้ (ยังไม่ล็อกอิน)
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin h-10 w-10 border-4 border-muted rounded-full border-t-primary mb-4"></div>
+          <p className="text-muted-foreground">กำลังนำทาง...</p>
+        </div>
       </div>
     );
   }
