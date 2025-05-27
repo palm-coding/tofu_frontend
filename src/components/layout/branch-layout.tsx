@@ -50,8 +50,6 @@ export function BranchLayout({ children }: BranchLayoutProps) {
       <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
         <div className="bg-card p-6 rounded-lg shadow-lg flex flex-col items-center">
           <div className="relative w-16 h-16">
-            {/* Modern spinner animation */}
-            <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
           </div>
         </div>
       </div>
