@@ -40,50 +40,41 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
       try {
         setLoading(true);
         setError(null);
-
         const response = await kitchenService.getOrders({ branchId });
+        console.log("Loaded orders:", response.orders);
         setOrders(response.orders);
       } catch (err) {
-        console.error("Error loading kitchen orders:", err);
+        console.error("Load orders error:", err);
         setError("ไม่สามารถโหลดข้อมูลออร์เดอร์ได้ กรุณาลองอีกครั้ง");
       } finally {
-        setLoading(false);
+        setLoading(false); // ✅ สำคัญมาก
       }
     }
 
     loadOrders();
 
-    // Optional: Set up periodic polling for new orders
-    const pollInterval = setInterval(async () => {
+    const interval = setInterval(async () => {
       try {
-        // Get the most recent order timestamp
         if (orders.length > 0) {
-          const timestamps = orders.map((o) => new Date(o.createdAt).getTime());
-          const lastTimestamp = new Date(Math.max(...timestamps)).toISOString();
+          const lastTimestamp = new Date(
+            Math.max(...orders.map((o) => new Date(o.createdAt).getTime()))
+          ).toISOString();
 
           const response = await kitchenService.pollForNewOrders(
             branchId,
             lastTimestamp
           );
-
-          if (response.orders.length > 0) {
-            // Merge new orders with existing ones
-            const newOrderIds = response.orders.map((o) => o.id);
-            const filteredOrders = orders.filter(
-              (o) => !newOrderIds.includes(o.id)
-            );
-
-            setOrders([...filteredOrders, ...response.orders]);
-          }
+          const newOrderIds = response.orders.map((o) => o.id);
+          const updated = orders.filter((o) => !newOrderIds.includes(o.id));
+          setOrders([...updated, ...response.orders]);
         }
       } catch (err) {
-        // Silent failure for polling - we don't want to interrupt the user
         console.error("Polling error:", err);
       }
-    }, 30000); // Poll every 30 seconds
+    }, 30000);
 
-    return () => clearInterval(pollInterval);
-  }, [branchId]);
+    return () => clearInterval(interval);
+  }, [branchId]); // ✅ FIXED: removed 'orders'
 
   const getTimeAgo = (dateString: string) => {
     try {
