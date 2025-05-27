@@ -33,12 +33,16 @@ import {
   AdjustStockDto,
   UpdateThresholdDto,
 } from "@/interfaces/stock.interface";
+import { Branch } from "@/interfaces/branch.interface";
 
 interface StockManagementProps {
-  branchId: string;
+  branchCode: string; // The URL-friendly code (e.g., "hatyai")
+  branchId?: string; // The MongoDB _id (optional if not available yet)
+  branch?: Branch | null; // The full branch object (optional)
 }
 
 export function StockDisplay({ branchId }: StockManagementProps) {
+  console.log("[Stock] branchId:", branchId);
   // State
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -66,6 +70,10 @@ export function StockDisplay({ branchId }: StockManagementProps) {
     async function loadData() {
       try {
         setLoading(true);
+        if (!branchId) {
+          setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+          return;
+        }
         setError(null);
 
         // Fetch ingredients and stocks data
@@ -95,6 +103,11 @@ export function StockDisplay({ branchId }: StockManagementProps) {
       // Add new ingredient
       const response = await stockService.addIngredient(newIngredient);
       setIngredients([...ingredients, response.ingredient]);
+
+      if (!branchId) {
+        setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+        return;
+      }
 
       // Create initial stock for this ingredient
       const stockResponse = await stockService.createStock(
@@ -176,6 +189,11 @@ export function StockDisplay({ branchId }: StockManagementProps) {
         type: adjustmentType,
       };
 
+      if (!branchId) {
+        setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+        return;
+      }
+
       const response = await stockService.adjustStock(
         branchId,
         adjustingStock.id,
@@ -209,6 +227,11 @@ export function StockDisplay({ branchId }: StockManagementProps) {
       const thresholdData: UpdateThresholdDto = {
         lowThreshold: Number(newThreshold),
       };
+
+      if (!branchId) {
+        setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+        return;
+      }
 
       const response = await stockService.updateThreshold(
         branchId,

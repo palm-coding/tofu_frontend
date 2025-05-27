@@ -51,6 +51,8 @@ export function BranchSidebar({
   const { state, setOpen } = useSidebar();
   const { theme, setTheme } = useTheme();
 
+  const branchCode = branch.code;
+
   // เพิ่ม ref เพื่อตรวจสอบว่าได้ทำการย่ออัตโนมัติแล้วหรือยัง
   const autoCollapseApplied = useRef<boolean>(false);
 
@@ -81,33 +83,33 @@ export function BranchSidebar({
   const navigation = [
     {
       name: "แดชบอร์ด",
-      href: `/${branchId}`,
+      href: `/${branchCode}`,
       icon: LayoutDashboard,
-      current: pathname === `/${branchId}`,
+      current: pathname === `/${branchCode}`,
     },
     {
       name: "จัดการโต๊ะ",
-      href: `/${branchId}/tables`,
+      href: `/${branchCode}/tables`,
       icon: Coffee,
-      current: pathname === `/${branchId}/tables`,
+      current: pathname === `/${branchCode}/tables`,
     },
     {
       name: "จัดการเมนู",
-      href: `/${branchId}/menu`,
+      href: `/${branchCode}/menu`,
       icon: CupSoda,
-      current: pathname === `/${branchId}/menu`,
+      current: pathname === `/${branchCode}/menu`,
     },
     {
       name: "จัดการสต็อก",
-      href: `/${branchId}/stock`,
+      href: `/${branchCode}/stock`,
       icon: Package,
-      current: pathname === `/${branchId}/stock`,
+      current: pathname === `/${branchCode}/stock`,
     },
     {
       name: "ห้องครัว",
-      href: `/${branchId}/kitchen`,
+      href: `/${branchCode}/kitchen`,
       icon: ShoppingCart,
-      current: pathname === `/${branchId}/kitchen`,
+      current: pathname === `/${branchCode}/kitchen`,
     },
   ];
 

@@ -14,12 +14,16 @@ import { TableQrCodeDialog } from "./dialogs/table-qrcode-dialog";
 import { TableDetailDialog } from "./dialogs/table-detail-dialog";
 import { TableManagement } from "./tabs/table-management";
 import { QueueManagement } from "./tabs/queue-management";
+import { Branch } from "@/interfaces/branch.interface";
 
 interface TableManagementProps {
-  branchId: string;
+  branchCode: string; // The URL-friendly code (e.g., "hatyai")
+  branchId?: string; // The MongoDB _id (optional if not available yet)
+  branch?: Branch | null; // The full branch object (optional)
 }
 
 export function TableDisplay({ branchId }: TableManagementProps) {
+  console.log("[Table] branchId:", branchId);
   // State for data
   const [tables, setTables] = useState<TableItem[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -51,6 +55,12 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         setLoading(true);
         setError(null);
 
+        if (!branchId) {
+          setError("Branch ID is required");
+          setLoading(false);
+          return;
+        }
+
         // Fetch tables data
         const tablesResponse = await tableService.getTables(branchId);
         setTables(tablesResponse.tables);
@@ -77,6 +87,12 @@ export function TableDisplay({ branchId }: TableManagementProps) {
   const handleCheckin = async (tableId: string) => {
     try {
       setError(null);
+
+      if (!branchId) {
+        setError("Branch ID is required");
+        setLoading(false);
+        return;
+      }
       const response = await tableService.tableCheckin(branchId, tableId);
 
       // Update tables state
@@ -95,6 +111,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
   const handleCheckout = async (tableId: string) => {
     try {
       setError(null);
+
+      if (!branchId) {
+        setError("Branch ID is required");
+        setLoading(false);
+        return;
+      }
+
       await tableService.tableCheckout(branchId, tableId);
 
       // Update tables state
@@ -141,6 +164,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
     try {
       setError(null);
+
+      if (!branchId) {
+        setError("Branch ID is required");
+        setLoading(false);
+        return;
+      }
+
       const response = await tableService.addToQueue(branchId, newQueue);
 
       // Update queue state
@@ -164,6 +194,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
   const handleSeatQueue = async (queueId: string) => {
     try {
       setError(null);
+
+      if (!branchId) {
+        setError("Branch ID is required");
+        setLoading(false);
+        return;
+      }
+
       const response = await tableService.updateQueueStatus(
         branchId,
         queueId,
@@ -183,6 +220,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
   const handleCancelQueue = async (queueId: string) => {
     try {
       setError(null);
+
+      if (!branchId) {
+        setError("Branch ID is required");
+        setLoading(false);
+        return;
+      }
+
       await tableService.removeFromQueue(branchId, queueId);
 
       // Update queue state
@@ -198,6 +242,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
     try {
       setError(null);
+
+      if (!branchId) {
+        setError("Branch ID is required");
+        setLoading(false);
+        return;
+      }
+
       await tableService.markTableAsPaid(branchId, selectedTable.id);
       setIsPaid(true);
     } catch (err) {

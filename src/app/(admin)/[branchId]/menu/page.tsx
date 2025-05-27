@@ -1,11 +1,20 @@
 "use client";
 
 import { MenuDisplay } from "@/components/admin/menu/menu-page";
-import { useParams } from "next/navigation";
+import { useBranch } from "@/context/branch-context";
 
 export default function MenuPage() {
-  const params = useParams();
-  const branchId = params.branchId as string;
+  const { branch, branchCode, loading } = useBranch();
 
-  return <MenuDisplay branchId={branchId} />;
+  if (loading) {
+    return <div className="p-4">กำลังโหลด...</div>;
+  }
+
+  return (
+    <MenuDisplay
+      branchCode={branchCode}
+      branchId={branch?._id}
+      branch={branch}
+    />
+  );
 }

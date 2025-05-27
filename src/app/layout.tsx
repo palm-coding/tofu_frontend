@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@/providers/theme-provider";
-import { AuthProvider } from "@/hooks/useAuth"; // เพิ่มการนำเข้า AuthProvider
+import { AuthProvider } from "@/context/auth-context"; // เพิ่มการนำเข้า AuthProvider
 import "./globals.css";
 import { DM_Sans, Noto_Sans_Thai } from "next/font/google";
 import { Toaster } from "sonner";

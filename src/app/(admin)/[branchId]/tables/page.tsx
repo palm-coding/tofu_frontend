@@ -1,11 +1,20 @@
 "use client";
 
 import { TableDisplay } from "@/components/admin/table/table-page";
-import { useParams } from "next/navigation";
+import { useBranch } from "@/context/branch-context";
 
 export default function TablesPage() {
-  const params = useParams();
-  const branchId = params.branchId as string;
+  const { branch, branchCode, loading } = useBranch();
 
-  return <TableDisplay branchId={branchId} />;
+  if (loading) {
+    return <div className="p-4">กำลังโหลด...</div>;
+  }
+
+  return (
+    <TableDisplay
+      branchCode={branchCode}
+      branchId={branch?._id}
+      branch={branch}
+    />
+  );
 }

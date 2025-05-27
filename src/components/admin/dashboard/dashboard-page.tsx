@@ -2,63 +2,53 @@
 
 import { useEffect, useState } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import { dashboardService } from "@/services/dashboard.service";
-import {
   DashboardStatItem,
   HourlySalesItem,
   MenuPopularityItem,
   WeeklySalesItem,
 } from "@/interfaces/dashboard.interface";
+import { dashboardService } from "@/services/dashboard.service";
+import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DashboardChart } from "./dashboard-chart";
+import { OverviewChart } from "./charts/overview-chart";
+import { SalesChart } from "./charts/sales-chart";
+import { MenuChart } from "./charts/menu-chart";
+import { HourlyChart } from "./charts/hourly-chart";
+import { Branch } from "@/interfaces/branch.interface";
 
 interface DashboardContentProps {
-  branchId: string;
+  branchCode: string; // The URL-friendly code (e.g., "hatyai")
+  branchId?: string; // The MongoDB _id (optional if not available yet)
+  branch?: Branch | null; // The full branch object (optional)
 }
 
 export function DashboardDisplay({ branchId }: DashboardContentProps) {
+  console.log("[Dashboard] branchId:", branchId);
   const [activeTab, setActiveTab] = useState("overview");
-  console.log("activeTab:", activeTab);
+  console.log("activeTab", activeTab);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // State for each data type
   const [stats, setStats] = useState<DashboardStatItem[]>([]);
   const [salesData, setSalesData] = useState<WeeklySalesItem[]>([]);
+  console.log("salesData", salesData);
+
   const [menuData, setMenuData] = useState<MenuPopularityItem[]>([]);
+  console.log("menuData", menuData);
   const [hourlyData, setHourlyData] = useState<HourlySalesItem[]>([]);
 
   useEffect(() => {
     async function fetchDashboardData() {
+      if (!branchId) {
+        setError("ไม่พบรหัสสาขา กรุณาลองอีกครั้ง");
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
-
-        // Fetch all dashboard data in one call
         const data = await dashboardService.getAllDashboardData(branchId);
-
-        // Update state with the fetched data
         setStats(data.stats);
         setSalesData(data.salesData);
         setMenuData(data.menuData);
@@ -70,7 +60,6 @@ export function DashboardDisplay({ branchId }: DashboardContentProps) {
         setLoading(false);
       }
     }
-
     fetchDashboardData();
   }, [branchId]);
 
@@ -135,172 +124,36 @@ export function DashboardDisplay({ branchId }: DashboardContentProps) {
             <TabsTrigger value="hourly">ยอดขายรายชั่วโมง</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4 ">
-            <Card>
-              <CardHeader>
-                <CardTitle>ยอดขายประจำสัปดาห์</CardTitle>
-                <CardDescription>
-                  ยอดขายรวมของร้านในแต่ละวันของสัปดาห์นี้
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={salesData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`฿${value}`, "ยอดขาย"]} />
-                    <Legend />
-                    <Bar
-                      dataKey="sales"
-                      name="ยอดขาย (บาท)"
-                      fill="#f59e0b"
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <TabsContent value="overview">
+            <DashboardChart
+              title="ยอดขายประจำสัปดาห์"
+              description="ยอดขายรวมของร้านในแต่ละวันของสัปดาห์นี้"
+              chart={<OverviewChart data={salesData} />}
+            />
           </TabsContent>
 
-          <TabsContent value="sales" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>ยอดขายประจำสัปดาห์</CardTitle>
-                <CardDescription>
-                  ยอดขายรวมของร้านในแต่ละวันของสัปดาห์นี้
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] ">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={salesData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`฿${value}`, "ยอดขาย"]} />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="sales"
-                      name="ยอดขาย (บาท)"
-                      stroke="#f59e0b"
-                      strokeWidth={2}
-                      activeDot={{ r: 8 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <TabsContent value="sales">
+            <DashboardChart
+              title="ยอดขายประจำสัปดาห์"
+              description="ยอดขายรวมของร้านในแต่ละวันของสัปดาห์นี้"
+              chart={<SalesChart data={salesData} />}
+            />
           </TabsContent>
 
-          <TabsContent value="menu" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>เมนูยอดนิยม</CardTitle>
-                <CardDescription>
-                  สัดส่วนการสั่งเมนูต่างๆ ในร้าน
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex justify-center">
-                <ResponsiveContainer
-                  width="100%"
-                  height="100%"
-                  className="max-w-md"
-                >
-                  <PieChart>
-                    <Pie
-                      data={menuData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      label={({ name, percent }) =>
-                        `${name} (${(percent * 100).toFixed(0)}%)`
-                      }
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {menuData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} รายการ`, ""]} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <TabsContent value="menu">
+            <DashboardChart
+              title="เมนูยอดนิยม"
+              description="สัดส่วนการสั่งเมนูต่างๆ ในร้าน"
+              chart={<MenuChart data={menuData} />}
+            />
           </TabsContent>
 
-          <TabsContent value="hourly" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>ยอดขายรายชั่วโมง</CardTitle>
-                <CardDescription>
-                  ยอดขายและจำนวนลูกค้าตามช่วงเวลา
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={hourlyData}
-                    margin={{
-                      top: 20,
-                      right: 30,
-                      left: 20,
-                      bottom: 5,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis yAxisId="left" orientation="left" stroke="#f59e0b" />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      stroke="#3b82f6"
-                    />
-                    <Tooltip
-                      formatter={(value, name) => [
-                        name === "sales" ? `฿${value}` : `${value} คน`,
-                        name === "sales" ? "ยอดขาย" : "จำนวนลูกค้า",
-                      ]}
-                    />
-                    <Legend />
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="sales"
-                      name="ยอดขาย (บาท)"
-                      stroke="#f59e0b"
-                      activeDot={{ r: 8 }}
-                    />
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="customers"
-                      name="จำนวนลูกค้า (คน)"
-                      stroke="#3b82f6"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <TabsContent value="hourly">
+            <DashboardChart
+              title="ยอดขายรายชั่วโมง"
+              description="ยอดขายและจำนวนลูกค้าตามช่วงเวลา"
+              chart={<HourlyChart data={hourlyData} />}
+            />
           </TabsContent>
         </Tabs>
       </div>

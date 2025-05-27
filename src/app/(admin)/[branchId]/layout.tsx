@@ -3,26 +3,22 @@
 import { BranchLayout } from "@/components/layout/branch-layout";
 import { useParams } from "next/navigation";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { BranchProvider } from "@/context/branch-context";
 
 export default function BranchPageLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // ใช้ useParams hook แทนการรับ params จาก props
   const params = useParams();
-  const branchId = params.branchId as string;
-
-  // สำหรับ client component ไม่สามารถใช้ cookies().get ได้โดยตรง
-  // จึงต้องตรวจสอบใน localStorage หรือใช้ค่า default แทน
-  const isSidebarCollapsed = branchId.includes("kitchen"); // ตัวอย่างการตรวจสอบหน้า kitchen
-  
-  // ใช้ defaultOpen (boolean) แทน defaultState (string)
-  const defaultOpen = !isSidebarCollapsed;
+  const branchCode = params.branchId as string;
+  const defaultOpen = !branchCode.includes("kitchen");
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <BranchLayout branchId={branchId}>{children}</BranchLayout>
+      <BranchProvider branchCode={branchCode}>
+        <BranchLayout>{children}</BranchLayout>
+      </BranchProvider>
     </SidebarProvider>
   );
 }

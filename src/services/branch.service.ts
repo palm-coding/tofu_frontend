@@ -1,92 +1,85 @@
-// services/auth.service.ts
-// import axios from "axios";
+// services/branch.service.ts
+import axios from "axios";
 import {
   Branch,
-  BranchDetailResponse,
-  BranchListResponse,
+  CreateBranchDto,
+  UpdateBranchDto,
 } from "@/interfaces/branch.interface";
 
-// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-// const api = axios.create({
-//   baseURL: API_URL,
-//   withCredentials: true,
-// });
-
-// Mock branches data
-const mockBranches: Branch[] = [
-  {
-    id: "683324ddf7a518cd81e53da2",
-    name: "สาขาตลาดเมืองใหม่",
-    address: "ตลาดเมืองใหม่ อ.เมือง จ.พัทลุง",
-    contact: "074-123456",
-    active: true,
-    createdAt: "2023-01-15T08:30:00Z",
-    updatedAt: "2023-06-10T14:20:00Z",
-  },
-  {
-    id: "branch2",
-    name: "สาขาตลาดใน",
-    address: "ตลาดใน อ.เมือง จ.พัทลุง",
-    contact: "074-654321",
-    active: true,
-    createdAt: "2023-03-20T10:45:00Z",
-    updatedAt: "2023-07-05T09:15:00Z",
-  },
-  {
-    id: "branch3",
-    name: "สาขาหาดใหญ่",
-    address: "ตลาดกิมหยง อ.หาดใหญ่ จ.สงขลา",
-    contact: "074-987654",
-    active: true,
-    createdAt: "2023-05-12T13:20:00Z",
-    updatedAt: "2023-08-18T16:30:00Z",
-  },
-];
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+});
 
 export const branchService = {
-  // Get all branches with pagination
-  getBranches: async (): Promise<BranchListResponse> => {
+  // Get all branches
+  getBranches: async (): Promise<Branch[]> => {
     try {
-      // In a real app, we would call the API:
-      // const response = await api.get('/branches');
-      // return response.data;
-
-      // For now, simulate API call with mock data
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            branches: mockBranches,
-            total: mockBranches.length,
-          });
-        }, 500); // Simulate network delay
-      });
+      const response = await api.get("/branches");
+      return response.data; // API ส่งข้อมูลเป็น array โดยตรง
     } catch (error) {
       console.error("Failed to fetch branches:", error);
-      throw error;
+      return []; // ส่งค่า empty array เมื่อเกิดข้อผิดพลาด
     }
   },
 
   // Get a single branch by ID
-  getBranchById: async (id: string): Promise<BranchDetailResponse> => {
+  getBranchById: async (_id: string): Promise<Branch | null> => {
     try {
-      // In a real app:
-      // const response = await api.get(`/branches/${id}`);
-      // return response.data;
-
-      return await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const branch = mockBranches.find((b) => b.id === id);
-          if (branch) {
-            resolve({ branch });
-          } else {
-            reject(new Error("Branch not found"));
-          }
-        }, 300);
-      });
+      const response = await api.get(`/branches/${_id}`);
+      return response.data; // API ส่งข้อมูล branch object โดยตรง
     } catch (error) {
-      console.error(`Failed to fetch branch ${id}:`, error);
-      throw error;
+      console.error(`Failed to fetch branch ${_id}:`, error);
+      return null; // ส่ง null เมื่อเกิดข้อผิดพลาด
+    }
+  },
+
+  // Create new branch
+  createBranch: async (branchData: CreateBranchDto): Promise<Branch | null> => {
+    try {
+      const response = await api.post("/branches", branchData);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to create branch:", error);
+      return null;
+    }
+  },
+
+  // Get branch by code
+  getBranchByCode: async (code: string): Promise<Branch | null> => {
+    try {
+      const response = await api.get(`/branches/code/${code}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch branch by code ${code}:`, error);
+      return null;
+    }
+  },
+
+  // Update branch
+  updateBranch: async (
+    _id: string,
+    branchData: UpdateBranchDto
+  ): Promise<Branch | null> => {
+    try {
+      const response = await api.patch(`/branches/${_id}`, branchData);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to update branch ${_id}:`, error);
+      return null;
+    }
+  },
+
+  // Delete branch
+  deleteBranch: async (_id: string): Promise<boolean> => {
+    try {
+      await api.delete(`/branches/${_id}`);
+      return true;
+    } catch (error) {
+      console.error(`Failed to delete branch ${_id}:`, error);
+      return false;
     }
   },
 };

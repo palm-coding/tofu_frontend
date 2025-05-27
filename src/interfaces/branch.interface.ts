@@ -1,12 +1,13 @@
 export interface Branch {
-  id: string;
+  _id: string; // เปลี่ยนเป็นบังคับ แทนที่จะเป็น optional
   name: string;
+  code: string; // เพิ่ม code ตามข้อมูลจริง
   address: string;
   contact: string;
   active?: boolean;
-  managerId?: string;
   createdAt?: string;
   updatedAt?: string;
+  __v?: number; // เพิ่มเพื่อรองรับ MongoDB version key
 }
 
 export interface BranchListResponse {

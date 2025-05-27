@@ -14,12 +14,12 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, Loader2, Store } from "lucide-react";
 import { Branch } from "@/interfaces/branch.interface";
 import { branchService } from "@/services/branch.service";
-import { useAuth } from "@/hooks/useAuth"; // เปลี่ยนมาใช้ useAuth hook
+import { useAuth } from "@/context/auth-context";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function BranchesDisplay() {
   const router = useRouter();
-  const { user } = useAuth(); // ใช้ user จาก useAuth แทน
+  const { user } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +29,9 @@ export default function BranchesDisplay() {
     async function loadBranches() {
       try {
         setLoading(true);
-        const { branches } = await branchService.getBranches();
-        setBranches(branches);
+        // เรียก API อย่างตรงไปตรงมา และใช้ผลลัพธ์โดยตรง
+        const branchList = await branchService.getBranches();
+        setBranches(branchList);
       } catch (err) {
         console.error("Error loading branches:", err);
         setError("ไม่สามารถโหลดข้อมูลสาขาได้ กรุณาลองอีกครั้ง");
@@ -48,8 +49,8 @@ export default function BranchesDisplay() {
     }
   }, [user, router]);
 
-  const handleSelectBranch = (branchId: string) => {
-    router.push(`/${branchId}`);
+  const handleSelectBranch = (code: string) => {
+    router.push(`/${code}`);
   };
 
   if (loading) {
@@ -89,54 +90,46 @@ export default function BranchesDisplay() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {branches.map((branch) => (
-            <Card
-              key={branch.id}
-              className={`overflow-hidden hover:shadow-lg transition-shadow ${
-                !branch.active ? "opacity-60" : ""
-              }`}
-            >
-              {/* ส่วนที่เหลือของการ์ดยังเหมือนเดิม */}
-              <CardHeader className="bg-backgroud">
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Store className="h-5 w-5" />
-                    {branch.name}
-                  </span>
-                  {branch.active !== undefined && (
-                    <span
-                      className={`text-xs py-1 px-2 rounded-full ${
-                        branch.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {branch.active ? "เปิดให้บริการ" : "ปิดปรับปรุง"}
+          {branches.length > 0 ? (
+            branches.map((branch) => (
+              <Card
+                key={branch._id}
+                className="overflow-hidden hover:shadow-lg transition-shadow"
+              >
+                <CardHeader className="bg-backgroud">
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Store className="h-5 w-5" />
+                      {branch.name}
                     </span>
+                  </CardTitle>
+                  <CardDescription>{branch.address}</CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <p className="text-sm">โทร: {branch.contact}</p>
+                  {branch.updatedAt && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      อัพเดตล่าสุด:{" "}
+                      {new Date(branch.updatedAt).toLocaleDateString("th-TH")}
+                    </p>
                   )}
-                </CardTitle>
-                <CardDescription>{branch.address}</CardDescription>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <p className="text-sm">โทร: {branch.contact}</p>
-                {branch.updatedAt && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    อัพเดตล่าสุด:{" "}
-                    {new Date(branch.updatedAt).toLocaleDateString("th-TH")}
-                  </p>
-                )}
-              </CardContent>
-              <CardFooter>
-                <Button
-                  className="w-full bg-amber-600 hover:bg-amber-700"
-                  onClick={() => handleSelectBranch(branch.id)}
-                  disabled={branch.active === false}
-                >
-                  จัดการสาขา
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-medium shadow-md"
+                    onClick={() => handleSelectBranch(branch.code)}
+                  >
+                    จัดการสาขา
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-10">
+              <Store className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">ไม่พบข้อมูลสาขา</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

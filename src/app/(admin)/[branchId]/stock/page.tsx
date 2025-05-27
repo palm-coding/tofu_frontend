@@ -1,11 +1,20 @@
 "use client";
 
 import { StockDisplay } from "@/components/admin/stock/stock-page";
-import { useParams } from "next/navigation";
+import { useBranch } from "@/context/branch-context";
 
 export default function StockPage() {
-  const params = useParams();
-  const branchId = params.branchId as string;
+  const { branch, branchCode, loading } = useBranch();
 
-  return <StockDisplay branchId={branchId} />;
+  if (loading) {
+    return <div className="p-4">กำลังโหลด...</div>;
+  }
+
+  return (
+    <StockDisplay
+      branchCode={branchCode}
+      branchId={branch?._id}
+      branch={branch}
+    />
+  );
 }

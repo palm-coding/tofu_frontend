@@ -7,66 +7,45 @@ import { BranchSidebar } from "./branch-sidebar";
 import { BranchMobileMenu } from "./branch-mobile-menu";
 import { BranchContent } from "./branch-content";
 import { BranchFooter } from "./branch-footer";
-import { Branch } from "@/interfaces/branch.interface";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/auth-context";
+import { useBranch } from "@/context/branch-context";
 
 interface BranchLayoutProps {
   children: React.ReactNode;
-  branchId: string;
 }
 
-// Mock branches data
-const mockBranches: Branch[] = [
-  {
-    id: "683324ddf7a518cd81e53da2",
-    name: "สาขาตลาดเมืองใหม่",
-    address: "ตลาดเมืองใหม่",
-    contact: "074-123456",
-  },
-  {
-    id: "branch2",
-    name: "สาขาตลาดใน",
-    address: "ตลาดใน",
-    contact: "074-789012",
-  },
-  {
-    id: "branch3",
-    name: "สาขาหาดใหญ่",
-    address: "หาดใหญ่",
-    contact: "074-345678",
-  },
-];
-
-export function BranchLayout({ children, branchId }: BranchLayoutProps) {
+export function BranchLayout({ children }: BranchLayoutProps) {
   const router = useRouter();
-  const { user, logout, loading } = useAuth();
-  const [branch, setBranch] = useState<Branch | null>(null);
+  const { user, logout, loading: authLoading } = useAuth();
+  const { branch, loading: branchLoading, error } = useBranch();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+  }, []);
 
-    // Find branch details
-    const branchDetails = mockBranches.find((b) => b.id === branchId);
-    if (branchDetails) {
-      setBranch(branchDetails);
-    }
-
-    // Check if user has access to this branch
-    if (user && user.role === "branch_owner" && user.branchId !== branchId) {
+  // Create a separate effect for the authorization check
+  useEffect(() => {
+    // ตรวจสอบสิทธิ์การเข้าถึง
+    if (
+      user &&
+      user.role === "branch_owner" &&
+      branch &&
+      user.branchId !== branch._id
+    ) {
+      // ถ้าเป็นเจ้าของสาขาแต่พยายามเข้าถึงสาขาอื่น ให้ redirect ไปยังสาขาของตัวเอง
       router.push(`/${user.branchId}`);
       return;
     }
-  }, [branchId, router, user]);
+  }, [user, branch, router]);
 
   const handleLogout = async () => {
-    await logout(); // ใช้ logout function จาก useAuth
-    // useAuth จะจัดการ redirect ให้อัตโนมัติ
+    await logout();
   };
 
-  // กำลังโหลดข้อมูล หรือยังไม่พร้อมแสดงผล
-  if (loading || !mounted || !branch) {
+  // กำลังโหลดข้อมูล
+  if (authLoading || branchLoading || !mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center">
@@ -77,7 +56,26 @@ export function BranchLayout({ children, branchId }: BranchLayoutProps) {
     );
   }
 
-  // ไม่มีข้อมูลผู้ใช้ (ยังไม่ล็อกอิน)
+  // ไม่พบข้อมูลสาขา
+  if (!branch) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center">
+          <p className="text-muted-foreground">
+            {error || "ไม่พบข้อมูลสาขาที่ต้องการ"}
+          </p>
+          <button
+            className="mt-4 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700"
+            onClick={() => router.push("/branches")}
+          >
+            กลับไปยังหน้าสาขา
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ไม่มีข้อมูลผู้ใช้
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -94,7 +92,7 @@ export function BranchLayout({ children, branchId }: BranchLayoutProps) {
       <div className="flex flex-1 w-full">
         {/* Desktop Sidebar */}
         <BranchSidebar
-          branchId={branchId}
+          branchId={branch._id}
           branch={branch}
           user={user}
           handleLogout={handleLogout}
@@ -104,7 +102,7 @@ export function BranchLayout({ children, branchId }: BranchLayoutProps) {
         <BranchMobileMenu
           branch={branch}
           user={user}
-          branchId={branchId}
+          branchId={branch._id}
           open={open}
           setOpen={setOpen}
           handleLogout={handleLogout}

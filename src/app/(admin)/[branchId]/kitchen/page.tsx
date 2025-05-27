@@ -1,11 +1,20 @@
 "use client";
 
 import { KitchenDisplay } from "@/components/admin/kitchen/kitchen-page";
-import { useParams } from "next/navigation";
+import { useBranch } from "@/context/branch-context";
 
 export default function KitchenPage() {
-  const params = useParams();
-  const branchId = params.branchId as string;
+  const { branch, branchCode, loading } = useBranch();
 
-  return <KitchenDisplay branchId={branchId} />;
+  if (loading) {
+    return <div className="p-4">กำลังโหลด...</div>;
+  }
+
+  return (
+    <KitchenDisplay
+      branchCode={branchCode}
+      branchId={branch?._id}
+      branch={branch}
+    />
+  );
 }

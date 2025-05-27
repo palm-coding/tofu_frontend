@@ -25,7 +25,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 
 // นำเข้า useAuth hook
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/auth-context";
 
 const formSchema = z.object({
   email: z.string().email({

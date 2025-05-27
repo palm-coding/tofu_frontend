@@ -40,12 +40,16 @@ import {
   MenuItem,
   NewMenuItemDto,
 } from "@/interfaces/menu.interface";
+import { Branch } from "@/interfaces/branch.interface";
 
 interface MenuManagementProps {
-  branchId: string;
+  branchCode: string; // The URL-friendly code (e.g., "hatyai")
+  branchId?: string; // The MongoDB _id (optional if not available yet)
+  branch?: Branch | null; // The full branch object (optional)
 }
 
 export function MenuDisplay({ branchId }: MenuManagementProps) {
+  console.log("[Menu] branchId:", branchId);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [activeTab, setActiveTab] = useState("menu");
@@ -74,6 +78,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
       try {
         setLoading(true);
         setError(null);
+        if (!branchId) {
+          setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+          return;
+        }
 
         // Fetch categories and menu items
         const [categoriesResponse, menuItemsResponse] = await Promise.all([
@@ -97,6 +105,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
   // Category functions
   const handleAddCategory = async () => {
     if (!newCategory.trim()) return;
+    if (!branchId) {
+      setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+      return;
+    }
 
     try {
       const response = await menuService.createCategory(branchId, newCategory);
@@ -110,7 +122,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
 
   const handleUpdateCategory = async () => {
     if (!editingCategory || !editingCategory.name.trim()) return;
-
+    if (!branchId) {
+      setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+      return;
+    }
     try {
       const response = await menuService.updateCategory(
         branchId,
@@ -139,6 +154,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
         alert("ไม่สามารถลบหมวดหมู่นี้ได้ เนื่องจากมีเมนูอยู่ในหมวดหมู่นี้");
         return;
       }
+      if (!branchId) {
+        setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+        return;
+      }
 
       await menuService.deleteCategory(branchId, categoryId);
       const updatedCategories = categories.filter(
@@ -159,6 +178,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
       !newMenuItem.price
     )
       return;
+    if (!branchId) {
+      setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+      return;
+    }
 
     try {
       const response = await menuService.createMenuItem(branchId, newMenuItem);
@@ -184,6 +207,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
       !editingMenuItem.categoryId
     )
       return;
+    if (!branchId) {
+      setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+      return;
+    }
 
     try {
       const response = await menuService.updateMenuItem(
@@ -205,6 +232,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
   };
 
   const handleDeleteMenuItem = async (itemId: string) => {
+    if (!branchId) {
+      setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+      return;
+    }
     try {
       await menuService.deleteMenuItem(branchId, itemId);
       const updatedMenuItems = menuItems.filter((item) => item.id !== itemId);
@@ -216,6 +247,10 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
   };
 
   const handleToggleAvailability = async (itemId: string) => {
+    if (!branchId) {
+      setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+      return;
+    }
     try {
       const response = await menuService.toggleMenuItemAvailability(
         branchId,
