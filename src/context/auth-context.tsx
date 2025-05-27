@@ -12,6 +12,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { authService } from "@/services/auth.service";
 import { User } from "@/interfaces/user.interface";
+import { branchService } from "@/services/branch.service";
 
 interface AuthContextType {
   user: User | null;
@@ -96,7 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (userData.role === "super_admin") {
         router.push("/branches");
       } else if (userData.role === "branch_owner" && userData.branchId) {
-        router.push(`/${userData.branchId}`);
+        // ดึงข้อมูล branch เพื่อเอา code มาใช้ใน URL
+        try {
+          const branchData = await branchService.getBranchById(
+            userData.branchId
+          );
+          if (branchData && branchData.code) {
+            router.push(`/${branchData.code}`);
+          } else {
+            // Fallback ถ้าหาไม่พบ
+            router.push(`/${userData.branchId}`);
+          }
+        } catch (err) {
+          console.error("Error fetching branch details:", err);
+          // Fallback ถ้ามีข้อผิดพลาด
+          router.push(`/${userData.branchId}`);
+        }
       }
     } catch (err: unknown) {
       const errorMessage =
