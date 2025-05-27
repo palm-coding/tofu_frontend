@@ -3,6 +3,7 @@ import { Coffee } from "lucide-react";
 import { KitchenOrder, OrderStatus } from "@/interfaces/kitchen.interface";
 import { OrderCard } from "./order-card";
 import { getOrderStatusColors } from "./helpers";
+import { cn } from "@/lib/utils";
 
 export function OrderColumn({
   title,
@@ -21,13 +22,23 @@ export function OrderColumn({
   onCompleteItem: (orderId: string, itemId: string) => void;
   onMoveOrder: (orderId: string, nextStatus: OrderStatus) => void;
 }) {
-  const { borderColor } = getOrderStatusColors(status);
+  const { borderColorClass } = getOrderStatusColors(status);
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4 bg-card text-card-foreground p-3 rounded-t-md">
         <h3 className="font-semibold">{title}</h3>
-        <Badge variant="outline" className="bg-red-300 text-accent-foreground">
+        <Badge
+          variant="outline"
+          className={cn(
+            "text-white",
+            status === "pending"
+              ? "bg-amber-500 dark:bg-amber-400"
+              : status === "preparing"
+              ? "bg-blue-500 dark:bg-blue-400"
+              : "bg-green-500 dark:bg-green-400"
+          )}
+        >
           {orders.length}
         </Badge>
       </div>
@@ -43,7 +54,7 @@ export function OrderColumn({
               key={order.id}
               order={order}
               status={status}
-              borderColor={borderColor}
+              borderColorClass={borderColorClass}
               nextStatus={nextStatus}
               isUpdating={isUpdating}
               onCompleteItem={(itemId) => onCompleteItem(order.id, itemId)}

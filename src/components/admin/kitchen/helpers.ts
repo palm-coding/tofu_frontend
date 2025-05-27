@@ -19,26 +19,26 @@ export const getOrderStatusColors = (status: OrderStatus) => {
   switch (status) {
     case "pending":
       return {
-        borderColor: "var(--chart-4)",
+        borderColorClass: "border-amber-500 dark:border-amber-400",
         buttonClass:
-          "bg-[var(--chart-4)] text-primary-foreground hover:bg-[var(--chart-4)]/90",
+          "bg-amber-500 hover:bg-amber-600 dark:bg-amber-400 dark:hover:bg-amber-500 text-white",
       };
     case "preparing":
       return {
-        borderColor: "var(--chart-2)",
+        borderColorClass: "border-blue-500 dark:border-blue-400",
         buttonClass:
-          "bg-[var(--chart-2)] text-primary-foreground hover:bg-[var(--chart-2)]/90",
+          "bg-blue-500 hover:bg-blue-600 dark:bg-blue-400 dark:hover:bg-blue-500 text-white",
       };
     case "served":
       return {
-        borderColor: "var(--chart-3)",
+        borderColorClass: "border-green-500 dark:border-green-400",
         buttonClass:
-          "bg-[var(--chart-3)] text-primary-foreground hover:bg-[var(--chart-3)]/90",
+          "bg-green-500 hover:bg-green-600 dark:bg-green-400 dark:hover:bg-green-500 text-white",
       };
     default:
       return {
-        borderColor: "var(--border)",
-        buttonClass: "bg-primary text-primary-foreground hover:bg-primary/90",
+        borderColorClass: "border-border",
+        buttonClass: "bg-primary hover:bg-primary/90 text-primary-foreground",
       };
   }
 };

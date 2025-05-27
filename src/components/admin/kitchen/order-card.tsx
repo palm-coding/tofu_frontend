@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 export function OrderCard({
   order,
   status,
-  borderColor,
+  borderColorClass,
   nextStatus,
   isUpdating,
   onCompleteItem,
@@ -23,7 +23,7 @@ export function OrderCard({
 }: {
   order: KitchenOrder;
   status: OrderStatus;
-  borderColor: string;
+  borderColorClass: string;
   nextStatus?: OrderStatus;
   isUpdating: boolean;
   onCompleteItem: (itemId: string) => void;
@@ -32,8 +32,10 @@ export function OrderCard({
   return (
     <Card
       key={order.id}
-      className="border-l-4 shadow-sm hover:shadow-md transition-all duration-200"
-      style={{ borderLeftColor: borderColor }}
+      className={cn(
+        "border-0 border-l-4 shadow-sm hover:shadow-md transition-all duration-200",
+        borderColorClass
+      )}
     >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
