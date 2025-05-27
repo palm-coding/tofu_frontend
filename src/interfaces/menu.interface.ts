@@ -1,19 +1,28 @@
 export interface MenuCategory {
-  id: string;
+  _id: string;
+  branchId: string;
   name: string;
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 }
 
 export interface MenuItem {
-  id: string;
+  _id: string;
+  branchId: string;
   name: string;
   description: string;
   price: number;
   categoryId: string;
   isAvailable: boolean;
   imageUrl: string;
+  createdAt?: string;
+  updatedAt?: string;
+  __v?: number;
 }
 
 export interface NewMenuItemDto {
+  branchId: string;
   name: string;
   description: string;
   price: number | string; // Handle form input
