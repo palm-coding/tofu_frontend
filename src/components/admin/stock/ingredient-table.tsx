@@ -6,7 +6,7 @@ interface IngredientTableProps {
   stocks: Stock[];
   ingredients: Ingredient[];
   getIngredient: (id: string) => Ingredient | undefined;
-  branchId: string;
+  branchId?: string;
   setIngredients: (value: Ingredient[]) => void;
   setStocks: (value: Stock[]) => void;
 }

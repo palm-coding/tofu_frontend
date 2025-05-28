@@ -10,9 +10,12 @@ import { StockHeader } from "./stock-header";
 import { LowStockAlert } from "./low-stock-alert";
 import { IngredientTable } from "./ingredient-table";
 import { StockChart } from "./charts/stock-chart";
+import { Branch } from "@/interfaces/branch.interface";
 
 interface StockDisplayProps {
-  branchId: string;
+  branchCode: string;
+  branchId?: string;
+  branch?: Branch | null;
 }
 
 export function StockDisplay({ branchId }: StockDisplayProps) {
@@ -124,6 +127,10 @@ export function StockDisplay({ branchId }: StockDisplayProps) {
               onClick={() => {
                 // สร้าง stock สำหรับวัตถุดิบที่มีอยู่แล้วทั้งหมด
                 ingredients.forEach(async (ingredient) => {
+                  if (!branchId) {
+                    console.error("Branch ID is required to create stock");
+                    return;
+                  }
                   try {
                     const response = await stockService.createStock(
                       branchId,

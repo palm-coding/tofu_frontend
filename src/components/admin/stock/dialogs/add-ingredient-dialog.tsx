@@ -24,7 +24,7 @@ interface AddIngredientDialogProps {
   setIngredients: (value: Ingredient[]) => void;
   stocks: Stock[];
   setStocks: (value: Stock[]) => void;
-  branchId: string;
+  branchId?: string;
 }
 
 export function AddIngredientDialog({
@@ -50,6 +50,11 @@ export function AddIngredientDialog({
       // Add new ingredient
       const response = await stockService.addIngredient(newIngredient);
       setIngredients([...ingredients, response.ingredient]);
+
+      if (!branchId) {
+        console.error("Branch ID is required to create stock");
+        return;
+      }
 
       // Create initial stock for this ingredient
       const stockResponse = await stockService.createStock(

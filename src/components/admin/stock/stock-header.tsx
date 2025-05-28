@@ -6,7 +6,7 @@ interface StockHeaderProps {
   setIngredients: (value: Ingredient[]) => void;
   stocks: Stock[];
   setStocks: (value: Stock[]) => void;
-  branchId: string;
+  branchId?: string;
 }
 
 export function StockHeader({

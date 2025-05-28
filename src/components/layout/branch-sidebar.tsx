@@ -7,7 +7,6 @@ import {
   LogOut,
   Package,
   ShoppingCart,
-  Store,
   Moon,
   Sun,
   ChevronLeft,
@@ -33,6 +32,7 @@ import {
 import { Branch } from "@/interfaces/branch.interface";
 import { User } from "@/interfaces/user.interface";
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 
 interface BranchSidebarProps {
   branchId: string;
@@ -130,23 +130,27 @@ export function BranchSidebar({
   return (
     <div className="hidden lg:block">
       <Sidebar variant="inset" collapsible="icon">
-        <SidebarHeader className="flex justify-center py-4">
+        <SidebarHeader className="flex justify-center py-6">
           <Link
             href={
               user.role === "super_admin" ? "/branches" : `/${user.branchId}`
             }
-            className={`flex ${
-              state === "expanded"
-                ? "items-center gap-2 px-4"
-                : "justify-center"
-            }`}
+            className="flex justify-center"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg">
-              <Store className="h-7 w-7 text-gray-900 dark:text-gray-100" />
+            <div
+              className={`flex items-center justify-center rounded-lg overflow-hidden ${
+                state === "expanded" ? "h-20 w-20" : "h-12 w-12"
+              }`}
+            >
+              <Image
+                src="/img/logo/tofucup1.png"
+                alt="Logo"
+                width={state === "expanded" ? 100 : 48}
+                height={state === "expanded" ? 100 : 48}
+                className="object-cover"
+                priority
+              />
             </div>
-            {state === "expanded" && (
-              <span className="text-lg font-medium">น้ำเต้าหู้พัทลุง</span>
-            )}
           </Link>
         </SidebarHeader>
 
