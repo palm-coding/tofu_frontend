@@ -96,9 +96,13 @@ export const stockService = {
 
       return await new Promise((resolve) => {
         setTimeout(() => {
-          const branchStocks = mockStocks.filter(
-            (stock) => stock.branchId === branchId
-          );
+          // แก้ไขส่วนนี้ - ใช้ branchId ที่ส่งเข้ามาแทนที่จะ filter
+          // เพื่อให้สามารถใช้ mock data ได้ในทุกกรณี
+          const branchStocks = mockStocks.map((stock) => ({
+            ...stock,
+            branchId: branchId, // กำหนด branchId ตามที่ส่งเข้ามา
+          }));
+
           resolve({ stocks: branchStocks });
         }, 500);
       });
