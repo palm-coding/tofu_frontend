@@ -145,8 +145,8 @@ export function BranchSidebar({
               <Image
                 src="/img/logo/tofucup1.png"
                 alt="Logo"
-                width={state === "expanded" ? 100 : 48}
-                height={state === "expanded" ? 100 : 48}
+                width={state === "expanded" ? 100 : 80}
+                height={state === "expanded" ? 100 : 80}
                 className="object-cover"
                 priority
               />
