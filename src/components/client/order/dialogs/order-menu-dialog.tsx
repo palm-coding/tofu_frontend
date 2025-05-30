@@ -10,7 +10,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { MenuItem } from "@/interfaces/order.interface";
+import { MenuItem } from "@/interfaces/menu.interface";
 import Image from "next/image";
 import { MinusCircle, PlusCircle, ShoppingCart, X } from "lucide-react";
 

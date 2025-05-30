@@ -4,30 +4,52 @@ import { useState, useEffect } from "react";
 import { AlertCircle, Coffee, Clock, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// นำเข้า interfaces ที่จำเป็น
+import type { TableDisplay } from "@/interfaces/table.interface";
+import { QueueItem, NewQueueInput } from "@/interfaces/queue.interface";
+import { Branch } from "@/interfaces/branch.interface";
+import { Session } from "@/interfaces/session.interface";
+
+// นำเข้า helper functions จากไฟล์ที่แยกออกมา
 import {
-  TableItem,
-  QueueItem,
-  NewQueueInput,
-} from "@/interfaces/table.interface";
-import { tableService } from "@/services/table.service";
+  getTimeAgo,
+  getStatusText,
+  getStatusColor,
+  calculateTableTotal,
+  getTableCardStyle,
+  getStatusBadgeStyle,
+} from "./utils/table-helper";
+
+// นำเข้า services ที่จำเป็น
+import {
+  tableService,
+  queueService,
+  sessionService,
+  orderService,
+} from "@/services/table.service";
+
+// นำเข้า components
 import { TableQrCodeDialog } from "./dialogs/table-qrcode-dialog";
 import { TableDetailDialog } from "./dialogs/table-detail-dialog";
 import { TableManagement } from "./tabs/table-management";
 import { QueueManagement } from "./tabs/queue-management";
-import { Branch } from "@/interfaces/branch.interface";
 
 interface TableManagementProps {
-  branchCode: string; // The URL-friendly code (e.g., "hatyai")
-  branchId?: string; // The MongoDB _id (optional if not available yet)
-  branch?: Branch | null; // The full branch object (optional)
+  branchCode: string;
+  branchId?: string;
+  branch?: Branch | null;
 }
 
 export function TableDisplay({ branchId }: TableManagementProps) {
   console.log("[Table] branchId:", branchId);
+
   // State for data
-  const [tables, setTables] = useState<TableItem[]>([]);
+  const [tables, setTables] = useState<TableDisplay[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [selectedTable, setSelectedTable] = useState<TableItem | null>(null);
+  const [selectedTable, setSelectedTable] = useState<TableDisplay | null>(null);
+  // เพิ่ม state เก็บข้อมูล session
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
 
   // UI state
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -66,7 +88,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         setTables(tablesResponse.tables);
 
         // Fetch queue data
-        const queueResponse = await tableService.getQueue(branchId);
+        const queueResponse = await queueService.getQueue(branchId);
         setQueue(queueResponse.queue);
       } catch (err) {
         console.error("Error loading table data:", err);
@@ -79,28 +101,67 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     loadData();
   }, [branchId]);
 
-  // Generate a unique session ID for QR code
-  const generateSessionId = () => {
-    return `${branchId}_${selectedTable?.id}_${Date.now()}`;
+  // สร้างฟังก์ชันสำหรับกำหนด qrCode โดยเฉพาะ ไม่ต้องรอ session
+  const generateTableQRCode = (tableId: string) => {
+    const timestamp = Date.now();
+    const randomCode = Math.random().toString(36).substring(2, 10);
+    return `table_${tableId}_${timestamp}_${randomCode}`;
   };
 
+  // เช็คอินโต๊ะ - เพิ่มการตรวจสอบ session ที่สร้างขึ้น
   const handleCheckin = async (tableId: string) => {
     try {
       setError(null);
 
       if (!branchId) {
         setError("Branch ID is required");
-        setLoading(false);
         return;
       }
-      const response = await tableService.tableCheckin(branchId, tableId);
 
-      // Update tables state
-      setTables(
-        tables.map((table) => (table.id === tableId ? response.table : table))
+      // สร้าง QR Code ก่อน
+      const generatedQRCode = generateTableQRCode(tableId);
+
+      // 1. อัพเดทสถานะโต๊ะเป็น occupied
+      await tableService.updateTable(tableId, { status: "occupied" });
+
+      // 2. สร้าง session ใหม่โดยไม่มีข้อมูล member
+      const sessionData = {
+        branchId,
+        tableId,
+        qrCode: generatedQRCode, // ส่ง qrCode ที่สร้างไปด้วย
+        // ไม่มี member - ลูกค้าจะ join เองเมื่อสแกน QR
+      };
+
+      console.log(
+        "สร้าง session ด้วยข้อมูล:",
+        JSON.stringify(sessionData, null, 2)
+      );
+      const sessionResponse = await sessionService.createSession(sessionData);
+      console.log(
+        "Session ที่สร้างขึ้น:",
+        JSON.stringify(sessionResponse, null, 2)
       );
 
-      setSelectedTable(response.table);
+      // แก้ไขการตรวจสอบโครงสร้างข้อมูล session - รองรับทั้งสองรูปแบบ
+      if (sessionResponse) {
+        // กรณี response แบบ { session: {...} }
+        setSelectedSession(sessionResponse);
+      } else {
+        console.warn("Session response ไม่มีข้อมูล session ที่ถูกต้อง");
+      }
+
+      // ดึงข้อมูลโต๊ะล่าสุด
+      const tableResponse = await tableService.getTableById(branchId, tableId);
+      setSelectedTable(tableResponse.table);
+
+      // อัพเดทรายการโต๊ะ
+      setTables(
+        tables.map((table) =>
+          table._id === tableId ? tableResponse.table : table
+        )
+      );
+
+      // แสดง QR Code สำหรับให้ลูกค้าสแกน
       setQrDialogOpen(true);
     } catch (err) {
       console.error("Error checking in table:", err);
@@ -108,22 +169,36 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     }
   };
 
+  // เช็คเอาท์โต๊ะ - แก้ไขเพื่อใช้ sessionService
   const handleCheckout = async (tableId: string) => {
     try {
       setError(null);
 
       if (!branchId) {
         setError("Branch ID is required");
-        setLoading(false);
         return;
       }
 
-      await tableService.tableCheckout(branchId, tableId);
+      // 1. ค้นหา active session ของโต๊ะนี้
+      try {
+        const sessionResponse = await sessionService.getActiveSessionForTable(
+          tableId
+        );
+        if (sessionResponse) {
+          // 2. เช็คเอาท์ session
+          await sessionService.checkoutSession(sessionResponse._id);
+        }
+      } catch (sessionError) {
+        console.warn("No active session found:", sessionError);
+      }
 
-      // Update tables state
+      // 3. อัพเดตสถานะโต๊ะเป็น available
+      await tableService.updateTable(tableId, { status: "available" });
+
+      // 4. อัพเดต tables state
       setTables(
         tables.map((table) =>
-          table.id === tableId
+          table._id === tableId
             ? {
                 ...table,
                 status: "available",
@@ -136,9 +211,12 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         )
       );
 
-      if (selectedTable?.id === tableId) {
+      // 5. รีเซ็ตข้อมูลที่เลือกอยู่
+      if (selectedTable?._id === tableId) {
         setSelectedTable(null);
+        setSelectedSession(null);
       }
+
       setDetailsDialogOpen(false);
       setIsPaid(false);
     } catch (err) {
@@ -147,17 +225,102 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     }
   };
 
-  const handleOpenDetails = (table: TableItem) => {
-    setSelectedTable(table);
-    setDetailsDialogOpen(true);
-    setIsPaid(false);
+  // เปิดรายละเอียดโต๊ะ - เพิ่มการดึงข้อมูล session
+  const handleOpenDetails = async (table: TableDisplay) => {
+    console.log("Opening details for table:", JSON.stringify(table, null, 2));
+    try {
+      setSelectedTable(table);
+      setDetailsDialogOpen(true);
+      setIsPaid(false);
+
+      if (table._id && table.status === "occupied") {
+        // หากไม่มี sessionId แต่โต๊ะอยู่ในสถานะไม่ว่าง ลองดึงข้อมูล active session
+        try {
+          const sessionResponse = await sessionService.getActiveSessionForTable(
+            table._id
+          );
+          console.log(
+            "Session response:",
+            JSON.stringify(sessionResponse, null, 2)
+          );
+          if (sessionResponse) {
+            setSelectedSession(sessionResponse);
+          } else {
+            console.error("No active session found for this table");
+          }
+        } catch (err) {
+          console.error("Error fetching active session:", err);
+        }
+      }
+    } catch (err) {
+      console.error("Error opening table details:", err);
+      setError("ไม่สามารถเปิดรายละเอียดโต๊ะได้ กรุณาลองอีกครั้ง");
+    }
   };
 
-  const handleShowQR = (table: TableItem) => {
-    setSelectedTable(table);
-    setQrDialogOpen(true);
+  // แสดง QR Code - แก้ไขเพื่อให้ปุ่มทำงานได้เสมอ
+  const handleShowQR = async (table: TableDisplay) => {
+    console.log("Showing QR code for table:", JSON.stringify(table, null, 2));
+    try {
+      setSelectedTable(table);
+
+      // กรณีโต๊ะว่าง ให้แสดง QR เพื่อเช็คอินได้เลย
+      if (table.status === "available") {
+        // กรณีโต๊ะว่าง ใช้การสร้าง QR Code ชั่วคราวเพื่อให้แสดงได้
+        const tempQRCode = generateTableQRCode(table._id);
+        setSelectedSession({
+          _id: `temp_${Date.now()}`,
+          branchId: branchId || "",
+          tableId: table._id,
+          qrCode: tempQRCode,
+          members: [],
+          checkinAt: new Date().toISOString(),
+          orderIds: [],
+        });
+        setQrDialogOpen(true);
+        return;
+      }
+
+      // กรณีโต๊ะไม่ว่าง พยายามดึงข้อมูล session
+      if (table._id) {
+        try {
+          const sessionResponse = await sessionService.getActiveSessionForTable(
+            table._id
+          );
+          console.log("Session response:", sessionResponse);
+
+          if (sessionResponse) {
+            // พบ session
+            setSelectedSession(sessionResponse);
+
+            // แม้ไม่มี qrCode ใน session ก็สร้างขึ้นใหม่
+            if (!sessionResponse.qrCode) {
+              console.warn("ไม่พบ QR Code ในเซสชัน - สร้างชั่วคราว");
+              const tempCode = generateTableQRCode(table._id);
+              setSelectedSession({
+                ...sessionResponse,
+                qrCode: tempCode,
+              });
+            }
+
+            // แสดง dialog เสมอ
+            setQrDialogOpen(true);
+          } else {
+            console.error("No active session found for this table");
+          }
+        } catch (err) {
+          // เกิดข้อผิดพลาดในการดึงข้อมูล session แต่ยังคงแสดง QR Code
+          console.error("Error fetching active session:", err);
+        }
+      }
+    } catch (err) {
+      console.error("Error showing QR code:", err);
+      // แสดงข้อผิดพลาดแต่ยังคงแสดง QR Code
+      setError("เกิดข้อผิดพลาดในการดึงข้อมูล QR Code");
+    }
   };
 
+  // ฟังก์ชันเกี่ยวกับคิว - ไม่ต้องแก้ไข
   const handleAddQueue = async () => {
     if (!newQueue.customerName || !newQueue.partySize || !newQueue.checkinTime)
       return;
@@ -167,16 +330,12 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
       if (!branchId) {
         setError("Branch ID is required");
-        setLoading(false);
         return;
       }
 
-      const response = await tableService.addToQueue(branchId, newQueue);
-
-      // Update queue state
+      const response = await queueService.addToQueue(branchId, newQueue);
       setQueue([...queue, response.queueItem]);
 
-      // Reset form
       setNewQueue({
         customerName: "",
         phoneNumber: "",
@@ -197,19 +356,16 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
       if (!branchId) {
         setError("Branch ID is required");
-        setLoading(false);
         return;
       }
 
-      const response = await tableService.updateQueueStatus(
+      const response = await queueService.updateQueueStatus(
         branchId,
         queueId,
         "seated"
       );
-
-      // Update queue state
       setQueue(
-        queue.map((item) => (item.id === queueId ? response.queueItem : item))
+        queue.map((item) => (item._id === queueId ? response.queueItem : item))
       );
     } catch (err) {
       console.error("Error updating queue status:", err);
@@ -223,131 +379,77 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
       if (!branchId) {
         setError("Branch ID is required");
-        setLoading(false);
         return;
       }
 
-      await tableService.removeFromQueue(branchId, queueId);
-
-      // Update queue state
-      setQueue(queue.filter((item) => item.id !== queueId));
+      await queueService.removeFromQueue(branchId, queueId);
+      setQueue(queue.filter((item) => item._id !== queueId));
     } catch (err) {
       console.error("Error removing from queue:", err);
       setError("ไม่สามารถลบคิวได้ กรุณาลองอีกครั้ง");
     }
   };
 
+  // บันทึกการชำระเงิน - แก้ไขเพื่อใช้งานกับ session
   const handleMarkAsPaid = async () => {
-    if (!selectedTable) return;
+    if (!selectedTable || !selectedSession) return;
 
     try {
       setError(null);
 
       if (!branchId) {
         setError("Branch ID is required");
-        setLoading(false);
         return;
       }
 
-      await tableService.markTableAsPaid(branchId, selectedTable.id);
+      // 1. ดึงรายการออร์เดอร์ในเซสชัน
+      const orders = await orderService.getOrdersForSession(
+        selectedSession._id
+      );
+
+      // 2. อัพเดตสถานะออร์เดอร์ทั้งหมดเป็นชำระเงินแล้ว
+      for (const order of orders) {
+        await orderService.updateOrderStatus(order._id, "paid");
+      }
+
+      // 3. ดึงข้อมูลโต๊ะล่าสุด
+      const updatedTableResponse = await tableService.getTableById(
+        branchId,
+        selectedTable._id
+      );
+
+      // 4. อัพเดต state
+      setSelectedTable(updatedTableResponse.table);
       setIsPaid(true);
+
+      // 5. อัพเดตรายการโต๊ะในหน้าจอ
+      setTables(
+        tables.map((table) =>
+          table._id === selectedTable._id ? updatedTableResponse.table : table
+        )
+      );
     } catch (err) {
       console.error("Error marking table as paid:", err);
       setError("ไม่สามารถบันทึกการชำระเงินได้ กรุณาลองอีกครั้ง");
     }
   };
 
-  const getOrderUrl = (sessionId: string) => {
-    // In a real app, this would be your actual domain
-    return `https://tofupos.com/order/${sessionId}`;
-  };
+  // แก้ไขฟังก์ชัน getOrderUrl เพื่อใช้งาน qrCode จาก session
+  const getOrderUrl = () => {
+    // ใช้ origin ของเว็บปัจจุบัน (ปรับตามสภาพแวดล้อมจริง)
+    const origin = "http://localhost:3001";
 
-  const getTimeAgo = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffMs = now.getTime() - date.getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-
-      if (diffMins < 1) return "เมื่อสักครู่";
-      if (diffMins === 1) return "1 นาทีที่แล้ว";
-      return `${diffMins} นาทีที่แล้ว`;
-    } catch (error) {
-      console.error("Error parsing date:", error);
-      return "ไม่ทราบเวลา";
+    // กรณีที่มี session และมี qrCode - กรณีหลักที่ใช้งาน
+    if (selectedSession?.qrCode) {
+      return `${origin}/order/${selectedSession.qrCode}`;
     }
+    // กรณีไม่มีข้อมูลใดๆ
+    return `${origin}/order`;
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "available":
-        return "ว่าง";
-      case "occupied":
-        return "ไม่ว่าง";
-      case "waiting":
-        return "รอคิว";
-      case "seated":
-        return "นั่งแล้ว";
-      case "pending":
-        return "รอรับออร์เดอร์";
-      case "preparing":
-        return "กำลังทำ";
-      case "served":
-        return "เสิร์ฟแล้ว";
-      default:
-        return "ไม่ทราบ";
-    }
-  };
+  // ฟังก์ชันช่วยเหลือต่างๆ - ย้ายไปไฟล์ tableHelpers.ts แล้ว
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-amber-500 hover:bg-amber-600 text-white";
-      case "preparing":
-        return "bg-blue-500 hover:bg-blue-600 text-white";
-      case "served":
-        return "bg-green-500 hover:bg-green-600 text-white";
-      case "waiting":
-        return "bg-yellow-500 hover:bg-yellow-600 text-white";
-      case "seated":
-        return "bg-green-500 hover:bg-green-600 text-white";
-      default:
-        return "";
-    }
-  };
-
-  const calculateTableTotal = (table: TableItem | null) => {
-    if (!table || !table.orders || table.orders.length === 0) return 0;
-    return table.orders.reduce((total, order) => total + (order.total || 0), 0);
-  };
-
-  const getTableCardStyle = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-card border-2 border-green-200 dark:border-green-700 hover:border-green-300 dark:hover:border-green-600";
-      case "occupied":
-        return "bg-red-50 dark:bg-accent/20 border-2 border-red-300 dark:border-red-700 hover:border-red-400 dark:hover:border-red-600";
-      default:
-        return "bg-card border-2 border-border";
-    }
-  };
-
-  const getStatusBadgeStyle = (status: string) => {
-    switch (status) {
-      case "available":
-        return "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-100 border-green-200 dark:border-green-700";
-      case "occupied":
-        return "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-100 border-red-200 dark:border-red-700";
-      case "waiting":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/60 dark:text-yellow-100 border-yellow-200 dark:border-yellow-700";
-      case "seated":
-        return "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-100 border-green-200 dark:border-green-700";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
-  // Show loading state
+  // แสดงสถานะ loading
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -430,20 +532,22 @@ export function TableDisplay({ branchId }: TableManagementProps) {
               />
             </TabsContent>
           </Tabs>
-          {/* QR Code Dialog */}
+
+          {/* QR Code Dialog - แก้ไข props */}
           <TableQrCodeDialog
             open={qrDialogOpen}
             onOpenChange={setQrDialogOpen}
             selectedTable={selectedTable}
             getOrderUrl={getOrderUrl}
-            generateSessionId={generateSessionId}
+            qrCode={selectedSession?.qrCode}
           />
 
-          {/* Table Details Dialog */}
+          {/* Table Details Dialog - เพิ่ม props session */}
           <TableDetailDialog
             open={detailsDialogOpen}
             onOpenChange={setDetailsDialogOpen}
             selectedTable={selectedTable}
+            session={selectedSession}
             isPaid={isPaid}
             onMarkAsPaid={handleMarkAsPaid}
             onCheckout={handleCheckout}

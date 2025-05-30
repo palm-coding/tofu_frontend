@@ -22,7 +22,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { QueueItem, NewQueueInput } from "@/interfaces/table.interface";
+// แก้ไขการนำเข้า interface จาก table.interface เป็น queue.interface
+import { QueueItem, NewQueueInput } from "@/interfaces/queue.interface";
 
 interface QueueManagementProps {
   queue: QueueItem[];
@@ -165,7 +166,7 @@ export function QueueManagement({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {queue.map((queueItem) => (
           <motion.div
-            key={queueItem.id}
+            key={queueItem._id}
             whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="h-full"
@@ -221,7 +222,7 @@ export function QueueManagement({
                       variant="outline"
                       size="sm"
                       className="flex-1 border-green-300 text-green-700 hover:bg-green-600 hover:text-primary-foreground dark:border-green-600 dark:text-green-400 dark:hover:bg-green-600 dark:hover:text-primary-foreground"
-                      onClick={() => handleSeatQueue(queueItem.id)}
+                      onClick={() => handleSeatQueue(queueItem._id)}
                     >
                       <Check className="mr-2 h-4 w-4" />
                       นั่งแล้ว
@@ -230,7 +231,7 @@ export function QueueManagement({
                       variant="outline"
                       size="sm"
                       className="border-red-300 text-red-700 hover:bg-red-600 hover:text-primary-foreground dark:border-red-600 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-primary-foreground"
-                      onClick={() => handleCancelQueue(queueItem.id)}
+                      onClick={() => handleCancelQueue(queueItem._id)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -240,7 +241,7 @@ export function QueueManagement({
                     variant="outline"
                     size="sm"
                     className="w-full border-input text-foreground hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => handleCancelQueue(queueItem.id)}
+                    onClick={() => handleCancelQueue(queueItem._id)}
                   >
                     <X className="mr-2 h-4 w-4" />
                     ลบคิว

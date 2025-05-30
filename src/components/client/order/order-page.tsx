@@ -12,18 +12,28 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart } from "lucide-react";
-import { toast, Toaster } from "sonner";
-import { orderService } from "@/services/order.service";
 import {
-  CartItem,
-  MenuItem,
-  MenuCategory,
-  Order,
-  OrderStatus,
-  SessionData,
-  SubmitOrderRequest,
-} from "@/interfaces/order.interface";
+  ShoppingCart,
+  Coffee,
+  Utensils,
+  IceCream,
+  Soup,
+  Coffee as CoffeeIcon,
+  Cookie,
+  LucideIcon,
+} from "lucide-react";
+import { toast } from "sonner";
+
+// แก้ไขการ import service ให้ถูกต้อง
+import { orderService } from "@/services/order/order.service";
+import { sessionService } from "@/services/session/session.service";
+import { menuService } from "@/services/menu.service";
+
+// เพิ่มการนำเข้า interfaces ที่จำเป็น
+import { Order, OrderStatus } from "@/interfaces/order.interface";
+import { MenuItem, MenuCategory } from "@/interfaces/menu.interface";
+import { Session, BranchData, TableData } from "@/interfaces/session.interface";
+import { CartItem } from "@/interfaces/cart.interface"; // นำเข้า CartItem จาก interfaces ใหม่
 
 // นำเข้าคอมโพเนนต์ย่อย
 import { OrderHeader } from "./order-header";
@@ -31,13 +41,42 @@ import { OrderContent } from "./order-content";
 import { OrderMenuDialog } from "./dialogs/order-menu-dialog";
 import { OrderCartDialog } from "./dialogs/order-cart-dialog";
 
+const getCategoryWithIcon = (
+  categories: MenuCategory[]
+): (MenuCategory & { icon: LucideIcon })[] => {
+  if (!Array.isArray(categories)) return [];
+
+  return categories.map((category) => {
+    let icon: LucideIcon;
+    // กำหนดไอคอนตามชื่อหมวดหมู่
+    if (category.name.includes("ท็อปปิ้ง")) {
+      icon = Cookie;
+    } else if (category.name.includes("ของหวาน")) {
+      icon = IceCream;
+    } else if (category.name.includes("เครื่องดื่มร้อน")) {
+      icon = Coffee;
+    } else if (category.name.includes("เครื่องดื่มเย็น")) {
+      icon = CoffeeIcon;
+    } else if (category.name.includes("ปาท่องโก๋")) {
+      icon = Utensils;
+    } else {
+      // ไอคอนเริ่มต้น
+      icon = Soup;
+    }
+
+    return { ...category, icon };
+  });
+};
+
 interface OrderPageProps {
-  sessionId: string;
+  qrCode: string;
 }
 
-export function OrderDisplay({ sessionId }: OrderPageProps) {
+export function OrderDisplay({ qrCode }: OrderPageProps) {
+  console.log("OrderDisplay rendered with qrCode:", qrCode);
   // State with proper TypeScript typing
-  const [session, setSession] = useState<SessionData | null>(null);
+  const [sessionId, setSessionId] = useState<string>("");
+  const [session, setSession] = useState<Session | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [userNameSubmitted, setUserNameSubmitted] = useState<boolean>(false);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -54,6 +93,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isTabsSticky, setIsTabsSticky] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [clientId, setClientId] = useState<string>("");
 
   // Refs for scroll detection
   const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -67,36 +107,155 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
       try {
         setLoading(true);
 
-        // Fetch session data
-        const sessionResponse = await orderService.getSession(sessionId);
-        setSession(sessionResponse.session);
-
-        // Fetch menu categories
-        const categoriesResponse = await orderService.getMenuCategories();
-        setCategories(categoriesResponse.categories);
-
-        if (categoriesResponse.categories.length > 0) {
-          setActiveCategory(categoriesResponse.categories[0].id);
+        if (!qrCode) {
+          toast.error("ไม่พบรหัส QR Code");
+          setLoading(false);
+          return;
         }
 
-        // Fetch menu items
-        const menuItemsResponse = await orderService.getMenuItems();
-        setMenuItems(menuItemsResponse.items);
+        console.log("กำลังดึงข้อมูล session สำหรับ QR Code:", qrCode);
 
-        // Fetch order history
-        const historyResponse = await orderService.getOrderHistory(sessionId);
-        setOrderHistory(historyResponse.orders);
+        // ดึงข้อมูล session โดยใช้ QR Code
+        let sessionsResponse;
+        try {
+          sessionsResponse = await sessionService.getSessionsForQrCode(qrCode);
+          console.log(
+            "Sessions response:",
+            JSON.stringify(sessionsResponse, null, 2)
+          );
+        } catch (err) {
+          console.error("Error fetching session:", err);
+          toast.error("ไม่สามารถดึงข้อมูลเซสชันได้");
+          setLoading(false);
+          return;
+        }
 
-        // Check local storage for user details and cart
-        const storedUserName = localStorage.getItem(`userName_${sessionId}`);
+        // ตรวจสอบว่ามี session หรือไม่
+        if (!sessionsResponse || sessionsResponse.length === 0) {
+          toast.error("ไม่พบข้อมูลโต๊ะ กรุณาตรวจสอบ QR Code");
+          setLoading(false);
+          return;
+        }
+
+        // ใช้ session แรกที่ได้
+        const currentSession = sessionsResponse[0];
+        console.log("Using session:", currentSession);
+
+        // ตรวจสอบความถูกต้องของ session object
+        if (!currentSession || !currentSession._id) {
+          toast.error("รูปแบบข้อมูล session ไม่ถูกต้อง");
+          setLoading(false);
+          return;
+        }
+
+        setSession(currentSession);
+        setSessionId(currentSession._id);
+
+        // ดึง branchId จาก session โดยรองรับทั้งกรณีที่เป็น object และ string
+        const branchId = getBranchIdFromSession(currentSession);
+        console.log("Using branchId:", branchId);
+
+        if (!branchId) {
+          toast.error("ไม่พบข้อมูลสาขา");
+          setLoading(false);
+          return;
+        }
+
+        // ดึงข้อมูล categories
+        try {
+          const categoriesResponse = await menuService.getCategories(branchId);
+          console.log("Categories response:", categoriesResponse);
+
+          // แก้ไขการตรวจสอบรูปแบบข้อมูล
+          if (Array.isArray(categoriesResponse)) {
+            // กรณีที่ API ส่งคืนเป็น array โดยตรง
+            setCategories(categoriesResponse);
+
+            if (categoriesResponse.length > 0) {
+              setActiveCategory(categoriesResponse[0]._id);
+            }
+          } else if (
+            categoriesResponse &&
+            categoriesResponse.categories &&
+            Array.isArray(categoriesResponse.categories)
+          ) {
+            // กรณีที่ API ส่งคืนเป็น { categories: [...] }
+            setCategories(categoriesResponse.categories);
+
+            if (categoriesResponse.categories.length > 0) {
+              setActiveCategory(categoriesResponse.categories[0]._id);
+            }
+          } else {
+            console.warn("Invalid categories response format");
+            setCategories([]);
+          }
+        } catch (categoryError) {
+          console.error("Error fetching categories:", categoryError);
+          setCategories([]);
+        }
+
+        // ดึงข้อมูล menu items
+        try {
+          const menuItemsResponse = await menuService.getMenuItems(branchId);
+          console.log("Menu items response:", menuItemsResponse);
+
+          // แก้ไขการตรวจสอบรูปแบบข้อมูล
+          if (Array.isArray(menuItemsResponse)) {
+            // กรณีที่ API ส่งคืนเป็น array โดยตรง
+            setMenuItems(menuItemsResponse);
+          } else if (
+            menuItemsResponse &&
+            menuItemsResponse.items &&
+            Array.isArray(menuItemsResponse.items)
+          ) {
+            // กรณีที่ API ส่งคืนเป็น { items: [...] }
+            setMenuItems(menuItemsResponse.items);
+          } else {
+            console.warn("Invalid menu items response format");
+            setMenuItems([]);
+          }
+        } catch (menuError) {
+          console.error("Error fetching menu items:", menuError);
+          setMenuItems([]);
+        }
+
+        // ดึงข้อมูล orders ของ session
+        try {
+          const historyResponse = await orderService.getOrdersForSession(
+            currentSession._id
+          );
+          console.log("Order history response:", historyResponse);
+          setOrderHistory(
+            Array.isArray(historyResponse) ? historyResponse : []
+          );
+        } catch (orderError) {
+          console.error("Error fetching order history:", orderError);
+          setOrderHistory([]);
+        }
+
+        // ตรวจสอบข้อมูลใน localStorage
+        const storedUserName = localStorage.getItem(`userName_${qrCode}`);
         if (storedUserName) {
           setUserName(storedUserName);
           setUserNameSubmitted(true);
         }
 
-        const storedCart = localStorage.getItem(`cart_${sessionId}`);
+        // ตรวจสอบ clientId ที่เคยบันทึกไว้
+        const storedClientId = localStorage.getItem(`clientId_${qrCode}`);
+        if (storedClientId) {
+          setClientId(storedClientId);
+        }
+
+        const storedCart = localStorage.getItem(`cart_${qrCode}`);
         if (storedCart) {
-          setCart(JSON.parse(storedCart));
+          try {
+            const parsedCart = JSON.parse(storedCart);
+            if (Array.isArray(parsedCart)) {
+              setCart(parsedCart);
+            }
+          } catch (error) {
+            console.error("Error parsing cart from localStorage:", error);
+          }
         }
       } catch (error) {
         console.error("Failed to load initial data:", error);
@@ -107,7 +266,49 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     };
 
     loadInitialData();
-  }, [sessionId]);
+  }, [qrCode]);
+
+  // Helper function to get branchId from session - ระบุ Type ที่ชัดเจน
+  const getBranchIdFromSession = (
+    sessionData: Session | Record<string, unknown>
+  ): string => {
+    if (!sessionData || !sessionData.branchId) return "";
+
+    if (typeof sessionData.branchId === "string") {
+      return sessionData.branchId;
+    }
+
+    if (
+      typeof sessionData.branchId === "object" &&
+      "branchId" in sessionData &&
+      "_id" in (sessionData.branchId as BranchData)
+    ) {
+      return (sessionData.branchId as BranchData)._id;
+    }
+
+    return "";
+  };
+
+  // Helper function to get tableId from session - ระบุ Type ที่ชัดเจน
+  const getTableIdFromSession = (
+    sessionData: Session | Record<string, unknown>
+  ): string => {
+    if (!sessionData || !sessionData.tableId) return "";
+
+    if (typeof sessionData.tableId === "string") {
+      return sessionData.tableId;
+    }
+
+    if (
+      typeof sessionData.tableId === "object" &&
+      "tableId" in sessionData &&
+      "_id" in (sessionData.tableId as TableData)
+    ) {
+      return (sessionData.tableId as TableData)._id;
+    }
+
+    return "";
+  };
 
   // Scroll detection for sticky tabs and active category
   useEffect(() => {
@@ -121,9 +322,14 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
       // Detect active category based on scroll position
       const categoryElements = Object.entries(categoryRefs.current);
 
-      if (categoryElements.length === 0 || categories.length === 0) return;
+      if (
+        categoryElements.length === 0 ||
+        !Array.isArray(categories) ||
+        categories.length === 0
+      )
+        return;
 
-      let currentCategory = categories[0].id;
+      let currentCategory = categories[0]._id;
 
       for (const [categoryId, element] of categoryElements) {
         if (element) {
@@ -148,7 +354,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
 
   // Intersection Observer for better category detection
   useEffect(() => {
-    if (categories.length === 0) return;
+    if (!Array.isArray(categories) || categories.length === 0) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -195,10 +401,63 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
   }, [activeCategory]);
 
-  const handleSubmitUserName = () => {
-    if (userName.trim()) {
-      localStorage.setItem(`userName_${sessionId}`, userName);
+  // แก้ไขฟังก์ชัน handleSubmitUserName เพื่อเรียกใช้ joinSession
+  const handleSubmitUserName = async () => {
+    if (!userName.trim()) return;
+
+    try {
+      // สร้าง clientId สำหรับลูกค้าคนนี้
+      const newClientId = `device_${Date.now()}`;
+      setClientId(newClientId);
+
+      // บันทึกข้อมูลลงใน localStorage
+      localStorage.setItem(`clientId_${qrCode}`, newClientId);
+      localStorage.setItem(`userName_${qrCode}`, userName);
+
+      // เรียกใช้ sessionService.joinSession เพื่อเข้าร่วมเซสชั่น
+      if (qrCode) {
+        try {
+          const joinData = {
+            clientId: newClientId,
+            userLabel: userName,
+          };
+
+          console.log(`กำลังเข้าร่วมเซสชั่นด้วย QR Code: ${qrCode}`, joinData);
+
+          const response = await sessionService.joinSession(qrCode, joinData);
+          console.log(
+            "เข้าร่วมเซสชั่นสำเร็จ:",
+            JSON.stringify(response, null, 2)
+          );
+
+          toast.success("เข้าร่วมโต๊ะสำเร็จ", {
+            description: `ยินดีต้อนรับคุณ ${userName}`,
+          });
+
+          // อัพเดต session หลังจากเข้าร่วม
+          if (response) {
+            setSession(response);
+          }
+        } catch (error) {
+          console.error("ไม่สามารถเข้าร่วมเซสชั่นได้:", error);
+          toast.error("พบปัญหาในการเข้าร่วมโต๊ะ", {
+            description: "แต่คุณยังสามารถสั่งอาหารได้",
+          });
+        }
+      }
+
+      // ตั้งค่าให้ผ่านหน้าเข้าสู่ระบบไปยังหน้าสั่งอาหาร
       setUserNameSubmitted(true);
+    } catch (error) {
+      console.error("เกิดข้อผิดพลาดในการลงทะเบียน:", error);
+
+      // บันทึกชื่อใน localStorage และยังคงให้ผู้ใช้สั่งอาหารได้แม้จะมีข้อผิดพลาด
+      localStorage.setItem(`userName_${qrCode}`, userName);
+      setUserNameSubmitted(true);
+
+      toast.error("พบข้อผิดพลาด", {
+        description: "แต่คุณยังสามารถสั่งอาหารได้",
+      });
     }
   };
 
@@ -213,7 +472,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     if (!selectedItem || itemQuantity <= 0) return;
 
     const existingItemIndex = cart.findIndex(
-      (cartItem) => cartItem.id === selectedItem.id
+      (cartItem) => cartItem._id === selectedItem._id
     );
 
     let newCart: CartItem[];
@@ -235,7 +494,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
 
     setCart(newCart);
-    localStorage.setItem(`cart_${sessionId}`, JSON.stringify(newCart));
+    localStorage.setItem(`cart_${qrCode}`, JSON.stringify(newCart));
     setItemDialogOpen(false);
 
     toast(`${selectedItem.name} x${itemQuantity}`, {
@@ -245,7 +504,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
 
   const addToCart = (item: CartItem) => {
     const existingItemIndex = cart.findIndex(
-      (cartItem) => cartItem.id === item.id
+      (cartItem) => cartItem._id === item._id
     );
 
     let newCart: CartItem[];
@@ -266,12 +525,12 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     }
 
     setCart(newCart);
-    localStorage.setItem(`cart_${sessionId}`, JSON.stringify(newCart));
+    localStorage.setItem(`cart_${qrCode}`, JSON.stringify(newCart));
   };
 
   const removeFromCart = (itemId: string) => {
     const existingItemIndex = cart.findIndex(
-      (cartItem) => cartItem.id === itemId
+      (cartItem) => cartItem._id === itemId
     );
 
     if (existingItemIndex >= 0) {
@@ -286,13 +545,13 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
       }
 
       setCart(newCart);
-      localStorage.setItem(`cart_${sessionId}`, JSON.stringify(newCart));
+      localStorage.setItem(`cart_${qrCode}`, JSON.stringify(newCart));
     }
   };
 
   const updateCartItemNote = (itemId: string, note: string) => {
     const existingItemIndex = cart.findIndex(
-      (cartItem) => cartItem.id === itemId
+      (cartItem) => cartItem._id === itemId
     );
 
     if (existingItemIndex >= 0) {
@@ -303,29 +562,50 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
       };
 
       setCart(newCart);
-      localStorage.setItem(`cart_${sessionId}`, JSON.stringify(newCart));
+      localStorage.setItem(`cart_${qrCode}`, JSON.stringify(newCart));
     }
   };
 
+  // แก้ไขฟังก์ชัน submitOrder เพื่อใช้ฟังก์ชัน helper สำหรับดึง ID
   const submitOrder = async () => {
     if (cart.length === 0) return;
 
     try {
-      const orderRequest: SubmitOrderRequest = {
-        items: cart,
-        total: calculateTotal(),
-        userName,
+      // แปลงข้อมูลจาก cart เป็น orderLines
+      const orderLines = cart.map((item) => ({
+        menuItemId: item._id,
+        qty: item.quantity,
+        note: item.note,
+      }));
+
+      // ใช้ฟังก์ชัน helper เพื่อดึง branchId และ tableId
+      const branchId = session ? getBranchIdFromSession(session) : "";
+      const tableId = session ? getTableIdFromSession(session) : "";
+
+      // สร้าง request object ตามที่ API ต้องการ
+      const orderRequest = {
         sessionId,
+        branchId,
+        tableId,
+        clientId: clientId || "",
+        orderBy: userName,
+        orderLines,
+        totalAmount: calculateTotal(),
       };
 
-      const response = await orderService.submitOrder(orderRequest);
+      console.log("กำลังส่งคำสั่งซื้อ:", orderRequest);
+
+      // แก้ไขจาก orderService.submitOrder เป็น orderService.createOrder
+      const response = await orderService.createOrder(orderRequest);
 
       // Update order history
-      setOrderHistory([response.order, ...orderHistory]);
+      if (response && response.order) {
+        setOrderHistory([response.order, ...orderHistory]);
+      }
 
       // Clear cart
       setCart([]);
-      localStorage.setItem(`cart_${sessionId}`, JSON.stringify([]));
+      localStorage.setItem(`cart_${qrCode}`, JSON.stringify([]));
 
       // Close cart dialog
       setCartDialogOpen(false);
@@ -341,18 +621,24 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
   };
 
   const calculateTotal = (): number => {
+    if (!Array.isArray(cart) || cart.length === 0) return 0;
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const getTimeAgo = (dateString: string): string => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
 
-    if (diffMins < 1) return "เมื่อสักครู่";
-    if (diffMins === 1) return "1 นาทีที่แล้ว";
-    return `${diffMins} นาทีที่แล้ว`;
+      if (diffMins < 1) return "เมื่อสักครู่";
+      if (diffMins === 1) return "1 นาทีที่แล้ว";
+      return `${diffMins} นาทีที่แล้ว`;
+    } catch (error) {
+      console.error("Error calculating time ago:", error);
+      return "ไม่ทราบเวลา";
+    }
   };
 
   const getStatusText = (status: OrderStatus): string => {
@@ -363,8 +649,10 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         return "กำลังทำ";
       case "served":
         return "เสิร์ฟแล้ว";
+      case "paid":
+        return "ชำระเงินแล้ว";
       default:
-        return status;
+        return status || "ไม่ทราบสถานะ";
     }
   };
 
@@ -376,8 +664,10 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         return "bg-[var(--chart-2)] text-primary-foreground";
       case "served":
         return "bg-[var(--chart-3)] text-primary-foreground";
+      case "paid":
+        return "bg-[var(--chart-1)] text-primary-foreground";
       default:
-        return "";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -385,20 +675,51 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
     setSearchQuery(query);
 
     try {
-      const response = await orderService.searchMenuItems(query);
-      setMenuItems(response.items);
+      // แก้ไขจาก orderService.searchMenuItems เป็นการกรองข้อมูลเอง
+      if (!query.trim()) {
+        // ถ้าค้นหาว่างเปล่า ดึงข้อมูลทั้งหมดอีกครั้ง
+        if (session) {
+          const branchId = getBranchIdFromSession(session);
+          if (branchId) {
+            try {
+              const menuItemsResponse = await menuService.getMenuItems(
+                branchId
+              );
+              if (menuItemsResponse && menuItemsResponse.items) {
+                setMenuItems(menuItemsResponse.items);
+              }
+            } catch (error) {
+              console.error("Error fetching menu items:", error);
+            }
+          }
+        }
+      } else {
+        // ถ้ามีคำค้นหา กรองจากข้อมูลที่มีอยู่
+        if (Array.isArray(menuItems)) {
+          const filteredItems = menuItems.filter(
+            (item) =>
+              item.name.toLowerCase().includes(query.toLowerCase()) ||
+              (item.description &&
+                item.description.toLowerCase().includes(query.toLowerCase()))
+          );
+          setMenuItems(filteredItems);
+        }
+      }
     } catch (error) {
       console.error("Failed to search menu items:", error);
     }
   };
 
-  // Group items by category
-  const groupedMenuItems = categories.reduce((acc, category) => {
-    acc[category.id] = menuItems.filter(
-      (item) => item.categoryId === category.id
-    );
-    return acc;
-  }, {} as { [key: string]: MenuItem[] });
+  // Group items by category - แก้ไขเพื่อรองรับกรณี categories หรือ menuItems เป็นค่าว่าง
+  const groupedMenuItems =
+    Array.isArray(categories) && categories.length > 0
+      ? categories.reduce((acc, category) => {
+          acc[category._id] = Array.isArray(menuItems)
+            ? menuItems.filter((item) => item.categoryId === category._id)
+            : [];
+          return acc;
+        }, {} as { [key: string]: MenuItem[] })
+      : {};
 
   const scrollToCategory = (categoryId: string) => {
     const element = categoryRefs.current[categoryId];
@@ -490,8 +811,6 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Toaster position="top-center" richColors />
-
       {/* Header Component */}
       <OrderHeader
         session={session}
@@ -510,7 +829,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
         tabsRef={tabsRef}
         searchRef={searchRef}
         categoryTabsRef={categoryTabsRef}
-        categories={categories}
+        categories={getCategoryWithIcon(categories)}
         activeCategory={activeCategory}
         groupedMenuItems={groupedMenuItems}
         categoryRefs={categoryRefs}
@@ -548,7 +867,7 @@ export function OrderDisplay({ sessionId }: OrderPageProps) {
       />
 
       {/* Floating Cart Button */}
-      {cart.length > 0 && (
+      {Array.isArray(cart) && cart.length > 0 && (
         <div className="fixed bottom-6 right-6 md:hidden">
           <Button
             size="lg"

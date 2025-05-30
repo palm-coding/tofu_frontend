@@ -11,17 +11,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Coffee, QrCode, Users, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TableItem } from "@/interfaces/table.interface";
+import { TableDisplay } from "@/interfaces/table.interface";
 
 interface TableManagementProps {
-  tables: TableItem[];
+  tables: TableDisplay[];
   handleCheckin: (tableId: string) => void;
-  handleOpenDetails: (table: TableItem) => void;
-  handleShowQR: (table: TableItem) => void;
+  handleOpenDetails: (table: TableDisplay) => void;
+  handleShowQR: (table: TableDisplay) => void;
   getTableCardStyle: (status: string) => string;
   getStatusBadgeStyle: (status: string) => string;
   getStatusText: (status: string) => string;
-  calculateTableTotal: (table: TableItem | null) => number;
+  calculateTableTotal: (table: TableDisplay | null) => number;
 }
 
 export function TableManagement({
@@ -38,7 +38,7 @@ export function TableManagement({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {tables.map((table) => (
         <motion.div
-          key={table.id}
+          key={table._id}
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
           className="h-full"
@@ -109,7 +109,7 @@ export function TableManagement({
                   className="w-full border-green-300 text-green-700 hover:bg-green-600 hover:text-primary-foreground dark:border-green-600 dark:text-green-400 dark:hover:bg-green-600 dark:hover:text-white transition-all duration-300"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCheckin(table.id);
+                    handleCheckin(table._id);
                   }}
                 >
                   <Coffee className="mr-2 h-4 w-4" />

@@ -1,75 +1,41 @@
-
-// Table status types
 export type TableStatus = "available" | "occupied";
 
-// Order status types
-export type OrderStatus = "pending" | "preparing" | "served";
-
-// Queue status types
-export type QueueStatus = "waiting" | "seated";
-
-// Table interfaces
-export interface TableItem {
-  id: string;
+export interface Table {
+  _id: string;
+  branchId: string;
   name: string;
-  status: TableStatus;
   capacity: number;
+  status: TableStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Combined interface for UI display (joining table and session data)
+export interface TableDisplay {
+  _id: string;
+  branchId: string;
+  name: string;
+  capacity: number;
+  status: TableStatus;
+  createdAt: string;
+  updatedAt: string;
+  // Session-related data
+  sessionId?: string;
   checkinTime?: string;
   customerName?: string;
-  sessionId?: string;
-  orders?: Order[];
+  orders?: {
+    _id: string;
+    status: string;
+    createdAt: string;
+    orderLines: import("./order.interface").OrderLine[];
+    totalAmount: number;
+  }[];
 }
 
-// Order interfaces
-export interface Order {
-  id: string;
-  status: OrderStatus;
-  createdAt: string;
-  items: OrderItem[];
-  total: number;
-}
-
-export interface OrderItem {
-  id: string;
-  name: string;
-  quantity: number;
-  price: number;
-  note: string;
-  status: OrderStatus;
-}
-
-// Queue interfaces
-export interface QueueItem {
-  id: string;
-  customerName: string;
-  phoneNumber: string;
-  partySize: number;
-  checkinTime: string;
-  status: QueueStatus;
-  createdAt: string;
-}
-
-// Form input interfaces
-export interface NewQueueInput {
-  customerName: string;
-  phoneNumber: string;
-  partySize: string;
-  checkinTime: string;
-}
-
-// API response interfaces
 export interface TableListResponse {
-  tables: TableItem[];
-}
-
-export interface QueueListResponse {
-  queue: QueueItem[];
+  tables: TableDisplay[];
 }
 
 export interface TableResponse {
-  table: TableItem;
-}
-
-export interface QueueResponse {
-  queueItem: QueueItem;
+  table: TableDisplay;
 }

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -17,41 +18,97 @@ import {
   Receipt,
   ShoppingCart,
   X,
+  Loader2,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
-import { TableItem, Order, OrderItem } from "@/interfaces/table.interface";
+import { TableDisplay } from "@/interfaces/table.interface";
+import { Session } from "@/interfaces/session.interface";
+import { OrderLine, Order } from "@/interfaces/order.interface";
+import { orderService } from "@/services/order/order.service";
 
 interface TableDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedTable: TableItem | null;
+  selectedTable: TableDisplay | null;
+  session?: Session | null;
   isPaid: boolean;
+  isSessionLoading?: boolean;
   onMarkAsPaid: () => void;
   onCheckout: (tableId: string) => void;
-  onShowQR: (table: TableItem) => void;
+  onShowQR: (table: TableDisplay) => void;
   getTimeAgo: (dateString: string) => string;
   getStatusText: (status: string) => string;
   getStatusColor: (status: string) => string;
-  calculateTableTotal: (table: TableItem | null) => number;
+  calculateTableTotal: (table: TableDisplay | null) => number;
 }
 
 export function TableDetailDialog({
   open,
   onOpenChange,
   selectedTable,
+  session,
   isPaid,
+  isSessionLoading = false,
   onMarkAsPaid,
   onCheckout,
   onShowQR,
   getTimeAgo,
   getStatusText,
   getStatusColor,
-  calculateTableTotal,
 }: TableDetailDialogProps) {
+  console.log(
+    "TableDetailDialog rendered with session:",
+    JSON.stringify(session, null, 2)
+  );
+
+  // State for orders
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch orders when dialog opens with session data
+  useEffect(() => {
+    async function fetchOrders() {
+      if (!open || !selectedTable) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // If we have a session with ID, use it to fetch orders
+        if (session && session._id) {
+          console.log("Fetching orders for session ID:", session._id);
+          const ordersData = await orderService.getOrdersForSession(
+            session._id
+          );
+          console.log(
+            "Orders fetched by session:",
+            JSON.stringify(ordersData, null, 2)
+          );
+          setOrders(ordersData);
+        } else {
+          console.log("No orders available");
+          setOrders([]);
+        }
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+        setError("ไม่สามารถดึงข้อมูลออร์เดอร์ได้");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchOrders();
+  }, [open, selectedTable, session]);
+
+  // Calculate total for all orders
+  const calculateOrdersTotal = () => {
+    return orders.reduce((total, order) => total + (order.totalAmount || 0), 0);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* เพิ่มความกว้างของ DialogContent และปรับ max-width ให้ใหญ่ขึ้น */}
       <DialogContent className="w-full min-w-[200px] max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] mx-auto bg-background border-0 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-light text-foreground">
@@ -63,90 +120,138 @@ export function TableDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Loading State */}
+        {isSessionLoading && (
+          <div className="flex justify-center items-center py-8">
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-muted-foreground">
+                กำลังโหลดข้อมูล session...
+              </p>
+            </div>
+          </div>
+        )}
+
         <ScrollArea className="max-h-[60vh] custom-scrollbar">
           <div className="p-2">
-            {/* สำหรับ desktop ใช้ grid-cols-2 (ซ้าย-ขวา), สำหรับ md และเล็กกว่าใช้ grid-cols-1 (เรียงทีละส่วน) */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-auto">
               {/* Left side - Order details */}
               <div className="space-y-6">
                 <h3 className="text-xl font-light text-foreground">
                   รายการอาหาร
                 </h3>
-                <div className="space-y-4">
-                  {selectedTable?.orders && selectedTable.orders.length > 0 ? (
-                    selectedTable.orders.map((order: Order, index: number) => (
-                      <div
-                        key={order.id}
-                        className="bg-muted dark:bg-muted/50 rounded-xl p-6 space-y-4"
-                      >
-                        <div className="flex justify-between items-center">
-                          <h4 className="font-medium text-foreground">
-                            ออร์เดอร์ #{index + 1}
-                          </h4>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "border-0 font-medium",
-                              getStatusColor(order.status)
-                            )}
-                          >
-                            {getStatusText(order.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          สั่งเมื่อ: {getTimeAgo(order.createdAt)}
-                        </p>
 
-                        <div className="space-y-3">
-                          {order.items &&
-                            order.items.map((item: OrderItem) => (
-                              <div
-                                key={item.id}
-                                className="flex justify-between items-start py-2"
-                              >
-                                <div className="flex-1">
-                                  <span className="font-medium text-foreground">
-                                    {item.name}
-                                  </span>
-                                  <span className="text-sm text-muted-foreground ml-2">
-                                    x{item.quantity}
-                                  </span>
-                                  {item.note && (
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                      หมายเหตุ: {item.note}
-                                    </p>
-                                  )}
-                                </div>
-                                <span className="font-medium text-foreground">
-                                  ฿{(item.price || 0) * (item.quantity || 0)}
-                                </span>
-                              </div>
-                            ))}
-                          <Separator className="my-3" />
-                          <div className="flex justify-between font-semibold text-lg">
-                            <span className="text-foreground">รวม</span>
-                            <span className="text-foreground">
-                              ฿{order.total || 0}
-                            </span>
+                {/* Loading State */}
+                {loading && (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {!loading && error && (
+                  <div className="bg-destructive/10 border border-destructive text-destructive p-4 rounded-lg">
+                    <p>{error}</p>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {/* Orders List - Using dynamically fetched orders */}
+                  {!loading && orders.length > 0
+                    ? orders.map((order, index) => (
+                        <div
+                          key={order._id}
+                          className="bg-muted dark:bg-muted/50 rounded-xl p-6 space-y-4"
+                        >
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium text-foreground">
+                              ออร์เดอร์ #{index + 1}
+                            </h4>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "border-0 font-medium",
+                                getStatusColor(order.status)
+                              )}
+                            >
+                              {getStatusText(order.status)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            สั่งโดย: {order.orderBy || "ไม่ระบุ"} | สั่งเมื่อ:{" "}
+                            {getTimeAgo(order.createdAt)}
+                          </p>
+
+                          <div className="space-y-3">
+                            {order.orderLines &&
+                              order.orderLines.map(
+                                (item: OrderLine, lineIndex: number) => {
+                                  // ตรวจสอบว่า menuItemId เป็น object หรือ string
+                                  const menuItemName =
+                                    typeof item.menuItemId === "object" &&
+                                    item.menuItemId
+                                      ? item.menuItemId.name
+                                      : "ไม่ระบุรายการ";
+
+                                  const menuItemPrice =
+                                    typeof item.menuItemId === "object" &&
+                                    item.menuItemId
+                                      ? item.menuItemId.price
+                                      : 0;
+
+                                  const quantity =
+                                    item.qty || item.quantity || 1;
+
+                                  return (
+                                    <div
+                                      key={`${order._id}-line-${lineIndex}`}
+                                      className="flex justify-between items-start py-2"
+                                    >
+                                      <div className="flex-1">
+                                        <span className="font-medium text-foreground">
+                                          {menuItemName}
+                                        </span>
+                                        <span className="text-sm text-muted-foreground ml-2">
+                                          x{quantity}
+                                        </span>
+                                        {item.note && (
+                                          <p className="text-sm text-muted-foreground mt-1">
+                                            หมายเหตุ: {item.note}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span className="font-medium text-foreground">
+                                        ฿{menuItemPrice * quantity}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                              )}
+                            <Separator className="my-3" />
+                            <div className="flex justify-between font-semibold text-lg">
+                              <span className="text-foreground">รวม</span>
+                              <span className="text-foreground">
+                                ฿{order.totalAmount || 0}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="py-12 text-center">
-                      <ShoppingCart className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground text-lg">
-                        ยังไม่มีออร์เดอร์
-                      </p>
-                    </div>
-                  )}
+                      ))
+                    : !loading && (
+                        <div className="py-12 text-center">
+                          <ShoppingCart className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                          <p className="text-muted-foreground text-lg">
+                            ยังไม่มีออร์เดอร์
+                          </p>
+                        </div>
+                      )}
                 </div>
               </div>
 
               {/* Right side - Payment and QR code */}
               <div className="space-y-6">
                 {/* สรุปรายการ */}
-                <div className="bg-muted dark:bg-muted/50 rounded-xl mx-2">
+                <div className="bg-muted dark:bg-muted/50 rounded-xl p-6">
                   <h3 className="text-xl font-light text-foreground mb-6">
                     สรุปรายการ
                   </h3>
@@ -156,7 +261,7 @@ export function TableDetailDialog({
                         จำนวนออร์เดอร์:
                       </span>
                       <span className="font-medium text-foreground">
-                        {selectedTable?.orders?.length || 0} รายการ
+                        {orders.length} รายการ
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -192,7 +297,7 @@ export function TableDetailDialog({
                     <div className="flex justify-between text-xl font-semibold">
                       <span className="text-foreground">ยอดรวมทั้งสิ้น:</span>
                       <span className="text-foreground">
-                        ฿{calculateTableTotal(selectedTable)}
+                        ฿{calculateOrdersTotal()}
                       </span>
                     </div>
                   </div>
@@ -200,9 +305,6 @@ export function TableDetailDialog({
 
                 {/* การชำระเงิน */}
                 <div className="bg-muted dark:bg-muted/50 rounded-xl p-6">
-                  {/* <h3 className="text-xl font-light text-foreground mb-6">
-                    การชำระเงิน
-                  </h3> */}
                   {isPaid ? (
                     <div className="text-center py-8">
                       <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
@@ -220,9 +322,7 @@ export function TableDetailDialog({
                       <div className="flex flex-col items-center mb-6">
                         <div className="bg-popover p-4 rounded-xl shadow-lg border border-border mb-4">
                           <QRCodeSVG
-                            value={`https://promptpay.io/0812345678/${calculateTableTotal(
-                              selectedTable
-                            )}`}
+                            value={`https://promptpay.io/0812345678/${calculateOrdersTotal()}`}
                             size={150}
                             level="H"
                             includeMargin={true}
@@ -238,7 +338,7 @@ export function TableDetailDialog({
                         <Button
                           variant="outline"
                           onClick={onMarkAsPaid}
-                          disabled={!selectedTable?.orders?.length}
+                          disabled={!orders.length || isSessionLoading}
                           className="border-input hover:bg-accent hover:text-accent-foreground transition-all duration-300"
                         >
                           <CreditCard className="mr-2 h-4 w-4" />
@@ -249,6 +349,7 @@ export function TableDetailDialog({
                           onClick={() =>
                             selectedTable && onShowQR(selectedTable)
                           }
+                          disabled={isSessionLoading}
                           className="border-input hover:bg-accent hover:text-accent-foreground transition-all duration-300"
                         >
                           <QrCode className="mr-2 h-4 w-4" />
@@ -274,12 +375,8 @@ export function TableDetailDialog({
               ปิด
             </Button>
             <Button
-              onClick={() => selectedTable && onCheckout(selectedTable.id)}
-              disabled={
-                !isPaid &&
-                !!selectedTable?.orders?.length &&
-                selectedTable?.orders?.length > 0
-              }
+              onClick={() => selectedTable && onCheckout(selectedTable._id)}
+              disabled={(!isPaid && orders.length > 0) || isSessionLoading}
               className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300"
             >
               <Receipt className="mr-2 h-4 w-4" />

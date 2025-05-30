@@ -1,73 +1,48 @@
-import { LucideIcon } from "lucide-react";
+export type OrderStatus = "pending" | "preparing" | "served" | "paid";
 
-// Menu and category interfaces
-export interface MenuCategory {
-  id: string;
-  name: string;
-  icon: LucideIcon;
+export interface OrderLine {
+  menuItemId:
+    | string
+    | {
+        _id: string;
+        name: string;
+        price: number;
+        description?: string;
+        imageUrl?: string;
+        [key: string]: string | number | boolean | undefined; // รองรับ property อื่นๆ ที่อาจมี
+      };
+  qty?: number;
+  quantity?: number;
+  note?: string;
+  status?: OrderStatus;
 }
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  categoryId: string;
-  imageUrl: string;
-  isAvailable?: boolean;
-}
-
-// Cart and order interfaces
-export interface CartItem extends MenuItem {
-  quantity: number;
-  note: string;
-}
-
-export type OrderStatus = "pending" | "preparing" | "served";
 
 export interface Order {
-  id: string;
-  items: CartItem[];
+  _id: string;
+  branchId: string;
+  sessionId: string;
+  tableId: string;
+  // เพิ่มฟิลด์ใหม่เพื่อรองรับการสั่งอาหารแยกตามลูกค้า
+  clientId: string;
+  orderBy: string;
   status: OrderStatus;
-  total: number;
+  orderLines: OrderLine[];
+  totalAmount: number;
   createdAt: string;
-  userName: string;
+  updatedAt: string;
 }
 
-// Session interface
-export interface SessionData {
-  id: string;
+export interface OrderResponse {
+  order: Order;
+}
+
+// เพิ่ม interface สำหรับ request ในการสร้าง order
+export interface CreateOrderRequest {
+  sessionId: string;
   branchId: string;
   tableId: string;
-  tableName: string;
-  branchName: string;
-}
-
-// API request interfaces
-export interface SubmitOrderRequest {
-  items: CartItem[];
-  total: number;
-  userName: string;
-  sessionId: string;
-}
-
-// API response interfaces
-export interface MenuCategoriesResponse {
-  categories: MenuCategory[];
-}
-
-export interface MenuItemsResponse {
-  items: MenuItem[];
-}
-
-export interface SessionResponse {
-  session: SessionData;
-}
-
-export interface OrderHistoryResponse {
-  orders: Order[];
-}
-
-export interface SubmitOrderResponse {
-  order: Order;
+  clientId: string;
+  orderBy: string;
+  orderLines: OrderLine[];
+  totalAmount: number;
 }

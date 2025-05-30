@@ -1,5 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, ShoppingCart, History, Coffee } from "lucide-react";
+import {
+  Search,
+  ShoppingCart,
+  History,
+  Coffee,
+  LucideIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,25 +19,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Image from "next/image";
-import {
-  MenuCategory,
-  MenuItem,
-  Order,
-  OrderStatus,
-} from "@/interfaces/order.interface";
+// แก้ไขการนำเข้า interfaces
+import { Order, OrderStatus, OrderLine } from "@/interfaces/order.interface";
+import { MenuCategory, MenuItem } from "@/interfaces/menu.interface";
 import { RefObject } from "react";
 
+// แก้ไข interface OrderContentProps เพื่อรองรับ icon ใน MenuCategory
 interface OrderContentProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   searchQuery: string;
   handleSearch: (query: string) => void;
   isTabsSticky: boolean;
-  // แก้ไข RefObject types ให้รองรับ null
   tabsRef: RefObject<HTMLDivElement | null>;
   searchRef: RefObject<HTMLDivElement | null>;
   categoryTabsRef: RefObject<HTMLDivElement | null>;
-  categories: MenuCategory[];
+  categories: (MenuCategory & { icon: LucideIcon })[]; // แก้ไขให้รองรับ icon เป็น LucideIcon
   activeCategory: string;
   groupedMenuItems: { [key: string]: MenuItem[] };
   categoryRefs: RefObject<{ [key: string]: HTMLDivElement | null }>;
@@ -113,14 +116,14 @@ export function OrderContent({
               >
                 {categories.map((category) => {
                   const IconComponent = category.icon;
-                  const isActive = activeCategory === category.id;
-                  const itemCount = groupedMenuItems[category.id]?.length || 0;
+                  const isActive = activeCategory === category._id;
+                  const itemCount = groupedMenuItems[category._id]?.length || 0;
 
                   return (
                     <button
-                      key={category.id}
-                      data-category={category.id}
-                      onClick={() => scrollToCategory(category.id)}
+                      key={category._id}
+                      data-category={category._id}
+                      onClick={() => scrollToCategory(category._id)}
                       className={`
                         relative flex items-center px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap
                         ${
@@ -153,20 +156,20 @@ export function OrderContent({
           {/* Menu Items by Category */}
           <div className={`${isTabsSticky ? "mt-16" : ""} space-y-8`}>
             {categories.map((category) => {
-              const categoryItems = groupedMenuItems[category.id] || [];
+              const categoryItems = groupedMenuItems[category._id] || [];
               const IconComponent = category.icon;
 
               if (categoryItems.length === 0) return null;
 
               return (
                 <div
-                  key={category.id}
+                  key={category._id}
                   ref={(el) => {
                     if (categoryRefs.current) {
-                      categoryRefs.current[category.id] = el;
+                      categoryRefs.current[category._id] = el;
                     }
                   }}
-                  data-category-id={category.id}
+                  data-category-id={category._id}
                   className="scroll-mt-32"
                 >
                   {/* Category Header */}
@@ -184,19 +187,19 @@ export function OrderContent({
                   </div>
 
                   {/* Category Items Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {categoryItems.map((item) => (
                       <Card
-                        key={item.id}
+                        key={item._id}
                         className="group overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg bg-card animate-fade-in"
                         onClick={() => handleOpenItemDialog(item)}
                       >
-                        <div className="relative h-48 w-full overflow-hidden">
+                        <div className="relative w-full h-60">
                           <Image
                             src={item.imageUrl || "/placeholder.svg"}
                             alt={item.name}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-fill group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                         <CardHeader className="pb-2">
@@ -242,7 +245,7 @@ export function OrderContent({
             ประวัติการสั่งอาหาร
           </h2>
 
-          {orderHistory.length === 0 ? (
+          {!Array.isArray(orderHistory) || orderHistory.length === 0 ? (
             <Card className="bg-card border-0 shadow-lg">
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <History className="h-16 w-16 text-muted-foreground mb-4" />
@@ -254,7 +257,7 @@ export function OrderContent({
           ) : (
             <div className="space-y-4">
               {orderHistory.map((order) => (
-                <Card key={order.id} className="bg-card border-0 shadow-lg">
+                <Card key={order._id} className="bg-card border-0 shadow-lg">
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-lg font-light text-card-foreground">
@@ -269,39 +272,70 @@ export function OrderContent({
                         {getStatusText(order.status)}
                       </Badge>
                     </div>
-                    <CardDescription>สั่งโดย: {order.userName}</CardDescription>
+                    <CardDescription>
+                      สั่งโดย: {order.orderBy || "ไม่ระบุ"}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {order.items.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex justify-between items-start"
-                        >
-                          <div>
-                            <span className="font-medium text-card-foreground">
-                              {item.name}
-                            </span>
-                            <span className="text-sm text-muted-foreground ml-2">
-                              x{item.quantity}
-                            </span>
-                            {item.note && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                หมายเหตุ: {item.note}
-                              </p>
-                            )}
-                          </div>
-                          <span className="font-medium text-card-foreground">
-                            ฿{item.price * item.quantity}
-                          </span>
-                        </div>
-                      ))}
+                      {Array.isArray(order.orderLines) &&
+                        order.orderLines.map(
+                          (item: OrderLine, index: number) => {
+                            // ตรวจสอบว่า menuItemId เป็น object หรือ string
+                            const menuItemName =
+                              typeof item.menuItemId === "object" &&
+                              item.menuItemId
+                                ? item.menuItemId.name
+                                : // ถ้าเป็น string ให้หาจาก menuItems
+                                  menuItems.find(
+                                    (menu) => menu._id === item.menuItemId
+                                  )?.name || "ไม่ระบุรายการ";
+
+                            const menuItemPrice =
+                              typeof item.menuItemId === "object" &&
+                              item.menuItemId
+                                ? item.menuItemId.price
+                                : menuItems.find(
+                                    (menu) => menu._id === item.menuItemId
+                                  )?.price || 0;
+
+                            const quantity = item.qty || item.quantity || 1;
+
+                            return (
+                              <div
+                                key={
+                                  typeof item.menuItemId === "object"
+                                    ? item.menuItemId._id
+                                    : item.menuItemId || index
+                                }
+                                className="flex justify-between items-start"
+                              >
+                                <div>
+                                  <span className="font-medium text-card-foreground">
+                                    {menuItemName}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground ml-2">
+                                    x{quantity}
+                                  </span>
+                                  {item.note && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      หมายเหตุ: {item.note}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className="font-medium text-card-foreground">
+                                  ฿{menuItemPrice * quantity}
+                                </span>
+                              </div>
+                            );
+                          }
+                        )}
                     </div>
                     <Separator className="my-4" />
                     <div className="flex justify-between font-semibold text-lg">
                       <span className="text-card-foreground">รวมทั้งสิ้น</span>
                       <span className="text-card-foreground">
-                        ฿{order.total}
+                        ฿{order.totalAmount}
                       </span>
                     </div>
                   </CardContent>

@@ -9,14 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
 import { X } from "lucide-react";
-import { TableItem } from "@/interfaces/table.interface";
+import { TableDisplay } from "@/interfaces/table.interface";
 
 interface TableQrCodeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedTable: TableItem | null;
-  getOrderUrl: (sessionId: string) => string;
-  generateSessionId: () => string;
+  selectedTable: TableDisplay | null;
+  getOrderUrl: () => string; // เปลี่ยนรูปแบบพารามิเตอร์
+  qrCode?: string; // เพิ่ม prop รับค่า qrCode จาก session
 }
 
 export function TableQrCodeDialog({
@@ -24,7 +24,7 @@ export function TableQrCodeDialog({
   onOpenChange,
   selectedTable,
   getOrderUrl,
-  generateSessionId,
+  qrCode,
 }: TableQrCodeDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,11 +38,10 @@ export function TableQrCodeDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col items-center justify-center py-8">
+          {/* ลบการตรวจสอบว่าเป็น "ไม่มีลิงก์ QR Code" และแสดง QR Code เสมอ */}
           <div className="bg-popover p-6 rounded-2xl shadow-lg border border-border">
             <QRCodeSVG
-              value={getOrderUrl(
-                selectedTable?.sessionId || generateSessionId()
-              )}
+              value={getOrderUrl()} // ใช้ค่าที่ได้จาก getOrderUrl โดยตรง
               size={200}
               level="H"
               includeMargin={true}
@@ -51,8 +50,21 @@ export function TableQrCodeDialog({
             />
           </div>
           <p className="mt-6 text-sm text-center text-muted-foreground max-w-xs break-all">
-            {getOrderUrl(selectedTable?.sessionId || generateSessionId())}
+            {getOrderUrl()}
           </p>
+
+          {/* แสดงข้อความแจ้งเตือนถ้าไม่มี QR Code */}
+          {!qrCode && (
+            <p className="mt-2 text-orange-500 text-sm text-center">
+              หมายเหตุ: ไม่พบรหัส QR ในระบบ กำลังใช้ URL สำรอง
+            </p>
+          )}
+
+          {qrCode && (
+            <p className="mt-2 text-sm text-center font-medium text-muted-foreground">
+              รหัส QR: {qrCode}
+            </p>
+          )}
         </div>
         <DialogFooter>
           <Button

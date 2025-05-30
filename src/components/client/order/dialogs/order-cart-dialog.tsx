@@ -10,7 +10,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Check, MinusCircle, PlusCircle, ShoppingCart, X } from "lucide-react";
-import { CartItem } from "@/interfaces/order.interface";
+import { CartItem } from "@/interfaces/cart.interface";
 
 interface OrderCartDialogProps {
   cart: CartItem[];
@@ -41,17 +41,18 @@ export function OrderCartDialog({
             รายการสั่งซื้อ
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            รายการอาหารที่คุณเลือก ({cart.length} รายการ)
+            รายการอาหารที่คุณเลือก ({Array.isArray(cart) ? cart.length : 0}{" "}
+            รายการ)
           </DialogDescription>
         </DialogHeader>
 
-        {cart.length > 0 ? (
+        {Array.isArray(cart) && cart.length > 0 ? (
           <>
             <ScrollArea className="max-h-[50vh] custom-scrollbar">
               <div className="space-y-4 pr-2">
                 {cart.map((item) => (
                   <div
-                    key={item.id}
+                    key={item._id}
                     className="py-4 border-b border-border last:border-b-0"
                   >
                     <div className="flex justify-between items-start mb-3">
@@ -72,7 +73,7 @@ export function OrderCartDialog({
                         variant="outline"
                         size="icon"
                         className="h-8 w-8 rounded-full border-input hover:bg-primary hover:text-primary-foreground"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item._id)}
                       >
                         <MinusCircle className="h-4 w-4" />
                       </Button>
@@ -93,7 +94,7 @@ export function OrderCartDialog({
                       placeholder="หมายเหตุ เช่น ไม่ใส่น้ำแข็ง, หวานน้อย"
                       value={item.note}
                       onChange={(e) =>
-                        updateCartItemNote(item.id, e.target.value)
+                        updateCartItemNote(item._id, e.target.value)
                       }
                       className="text-sm border-2 border-input focus:border-ring rounded-xl"
                     />
