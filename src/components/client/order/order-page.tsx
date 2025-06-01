@@ -810,7 +810,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="container px-4 mx-auto min-h-screen bg-background">
       {/* Header Component */}
       <OrderHeader
         session={session}

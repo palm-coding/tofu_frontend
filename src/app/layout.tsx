@@ -1,5 +1,4 @@
 import { ThemeProvider } from "@/providers/theme-provider";
-import { AuthProvider } from "@/context/auth-context"; // เพิ่มการนำเข้า AuthProvider
 import "./globals.css";
 import { DM_Sans, Noto_Sans_Thai } from "next/font/google";
 import { Toaster } from "sonner";
@@ -36,7 +35,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {/* เพิ่ม AuthProvider ครอบ children เพื่อให้ทุกหน้าเข้าถึง Context ได้ */}
-          <AuthProvider>{children}</AuthProvider>
+          {children}
           <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>

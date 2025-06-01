@@ -8,32 +8,44 @@ export const getTimeAgo = (dateString: string) => {
 
     // คำนวณความแตกต่างในหน่วยเวลาต่างๆ
     const diffSecs = Math.floor(diffMs / 1000);
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-    const diffWeeks = Math.floor(diffMs / 604800000);
-    const diffMonths = Math.floor(diffMs / 2592000000); // ประมาณ 30 วัน
 
-    // เลือกหน่วยเวลาที่เหมาะสมที่สุด
-    if (diffMonths > 0) {
-      return diffMonths === 1 ? "1 เดือนที่แล้ว" : `${diffMonths} เดือนที่แล้ว`;
-    } else if (diffWeeks > 0) {
-      return diffWeeks === 1
-        ? "1 สัปดาห์ที่แล้ว"
-        : `${diffWeeks} สัปดาห์ที่แล้ว`;
-    } else if (diffDays > 0) {
-      return diffDays === 1 ? "1 วันที่แล้ว" : `${diffDays} วันที่แล้ว`;
-    } else if (diffHours > 0) {
+    // เริ่มตรวจสอบจากหน่วยเล็กไปใหญ่
+    // น้อยกว่า 60 วินาที
+    if (diffSecs < 60) {
+      return diffSecs <= 5 ? "เมื่อสักครู่" : `${diffSecs} วินาทีที่แล้ว`;
+    }
+
+    // น้อยกว่า 60 นาที
+    const diffMins = Math.floor(diffSecs / 60);
+    if (diffMins < 60) {
+      return diffMins === 1 ? "1 นาทีที่แล้ว" : `${diffMins} นาทีที่แล้ว`;
+    }
+
+    // น้อยกว่า 24 ชั่วโมง
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) {
       return diffHours === 1
         ? "1 ชั่วโมงที่แล้ว"
         : `${diffHours} ชั่วโมงที่แล้ว`;
-    } else if (diffMins > 0) {
-      return diffMins === 1 ? "1 นาทีที่แล้ว" : `${diffMins} นาทีที่แล้ว`;
-    } else if (diffSecs > 0) {
-      return diffSecs === 1 ? "1 วินาทีที่แล้ว" : `${diffSecs} วินาทีที่แล้ว`;
-    } else {
-      return "เมื่อสักครู่";
     }
+
+    // น้อยกว่า 7 วัน
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) {
+      return diffDays === 1 ? "1 วันที่แล้ว" : `${diffDays} วันที่แล้ว`;
+    }
+
+    // น้อยกว่า 30 วัน
+    const diffWeeks = Math.floor(diffDays / 7);
+    if (diffWeeks < 5) {
+      return diffWeeks === 1
+        ? "1 สัปดาห์ที่แล้ว"
+        : `${diffWeeks} สัปดาห์ที่แล้ว`;
+    }
+
+    // มากกว่า 30 วัน
+    const diffMonths = Math.floor(diffDays / 30);
+    return diffMonths === 1 ? "1 เดือนที่แล้ว" : `${diffMonths} เดือนที่แล้ว`;
   } catch {
     return "ไม่ทราบเวลา";
   }
