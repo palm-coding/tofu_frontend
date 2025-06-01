@@ -1,4 +1,9 @@
-export type OrderStatus = "pending" | "preparing" | "served" | "paid";
+export type OrderStatus =
+  | "received"
+  | "pending"
+  | "preparing"
+  | "served"
+  | "paid";
 
 export interface OrderLine {
   menuItemId:
@@ -17,11 +22,21 @@ export interface OrderLine {
   status?: OrderStatus;
 }
 
+export interface Table {
+  _id: string;
+  branchId: string;
+  name: string;
+  capacity: number;
+  status: "available" | "occupied";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Order {
   _id: string;
   branchId: string;
   sessionId: string;
-  tableId: string;
+  tableId: Table;
   // เพิ่มฟิลด์ใหม่เพื่อรองรับการสั่งอาหารแยกตามลูกค้า
   clientId: string;
   orderBy: string;

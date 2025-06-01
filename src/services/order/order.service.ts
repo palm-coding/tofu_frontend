@@ -105,7 +105,7 @@ export const orderService = {
         : `/orders/branch/${branchId}`;
 
       const response = await api.get(url);
-      return response.data.orders || [];
+      return response.data || [];
     } catch (error) {
       console.error("Failed to fetch branch orders:", error);
       throw error;

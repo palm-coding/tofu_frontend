@@ -32,6 +32,8 @@ export const getStatusText = (status: string) => {
       return "รอคิว";
     case "seated":
       return "นั่งแล้ว";
+    case "received":
+      return "รับออร์เดอร์แล้ว";
     case "pending":
       return "รอรับออร์เดอร์";
     case "preparing":

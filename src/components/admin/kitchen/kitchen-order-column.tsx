@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Coffee } from "lucide-react";
-import { KitchenOrder, OrderStatus } from "@/interfaces/kitchen.interface";
-import { OrderCard } from "./order-card";
+import { Order, OrderStatus } from "@/interfaces/order.interface"; // เปลี่ยนเป็น Order interface
+import { OrderCard } from "./kitchen-order-card";
 import { getOrderStatusColors } from "./helpers";
 import { cn } from "@/lib/utils";
 
@@ -13,14 +13,16 @@ export function OrderColumn({
   isUpdating,
   onCompleteItem,
   onMoveOrder,
+  getItemId,
 }: {
   title: string;
-  orders: KitchenOrder[];
+  orders: Order[]; // เปลี่ยนเป็น Order[]
   status: OrderStatus;
   nextStatus?: OrderStatus;
   isUpdating: boolean;
   onCompleteItem: (orderId: string, itemId: string) => void;
   onMoveOrder: (orderId: string, nextStatus: OrderStatus) => void;
+  getItemId: (orderId: string, index: number) => string;
 }) {
   const { borderColorClass } = getOrderStatusColors(status);
 
@@ -51,14 +53,15 @@ export function OrderColumn({
         ) : (
           orders.map((order) => (
             <OrderCard
-              key={order.id}
+              key={order._id} // ใช้ _id แทน id
               order={order}
               status={status}
               borderColorClass={borderColorClass}
               nextStatus={nextStatus}
               isUpdating={isUpdating}
-              onCompleteItem={(itemId) => onCompleteItem(order.id, itemId)}
-              onMoveOrder={() => onMoveOrder(order.id, nextStatus!)}
+              onCompleteItem={(itemId) => onCompleteItem(order._id, itemId)} // ใช้ _id แทน id
+              onMoveOrder={() => onMoveOrder(order._id, nextStatus!)} // ใช้ _id แทน id
+              getItemId={getItemId}
             />
           ))
         )}
