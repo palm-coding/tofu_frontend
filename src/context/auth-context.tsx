@@ -34,10 +34,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  // ฟังก์ชั่นตรวจสอบว่าเป็น public path หรือไม่ (เพิ่มใหม่)
+  const isPublicPath = () => {
+    return (
+      pathname === "/" ||
+      pathname?.startsWith("/login") ||
+      pathname?.startsWith("/order")
+    ); // เพิ่ม /order
+  };
+
   // ฟังก์ชั่นเช็คสถานะ authentication เมื่อโหลดแอพ
   const checkAuthStatus = useCallback(async () => {
-    // เช็คก่อนทันทีว่าอยู่ที่หน้าหลักหรือ login หรือไม่
-    if (pathname === "/" || pathname?.startsWith("/login")) {
+    // เช็คก่อนทันทีว่าเป็น public path หรือไม่
+    if (isPublicPath()) {
+      // แก้ไขตรงนี้
       setLoading(false);
       return;
     }
@@ -48,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
 
-      // ถ้าไม่มีข้อมูลผู้ใช้ และไม่ได้อยู่ที่หน้าหลัก ให้ redirect
+      // ถ้าไม่มีข้อมูลผู้ใช้ และไม่ได้อยู่ที่ public path ให้ redirect
       if (!currentUser) {
         router.push("/");
       }
@@ -71,8 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleLogout = () => {
       setUser(null);
 
-      // redirect ถ้าไม่อยู่ที่หน้าหลักหรือหน้า login
-      if (pathname !== "/" && !pathname?.startsWith("/login")) {
+      // redirect ถ้าไม่อยู่ที่ public path
+      if (!isPublicPath()) {
+        // แก้ไขตรงนี้
         router.push("/");
       }
     };
@@ -143,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ตรวจสอบการเข้าถึงตาม role
   const checkAccess = async (requiredRole?: string) => {
     // ข้ามการตรวจสอบถ้าอยู่ที่หน้าหลัก
-    if (pathname === "/") {
+    if (isPublicPath()) {
       return true;
     }
     return await authService.checkAccess(requiredRole);
@@ -180,9 +191,18 @@ export function withAuth<P extends object>(
     const router = useRouter();
     const pathname = usePathname();
 
+    // ฟังก์ชั่นตรวจสอบว่าเป็น public path หรือไม่ (เพิ่มใหม่)
+    const isPublicPath = () => {
+      return (
+        pathname === "/" ||
+        pathname?.startsWith("/login") ||
+        pathname?.startsWith("/order")
+      ); // เพิ่ม /order
+    };
+
     useEffect(() => {
       // ข้ามการตรวจสอบถ้าอยู่ที่หน้าหลัก
-      if (pathname === "/") {
+      if (isPublicPath()) {
         return;
       }
 
@@ -198,7 +218,7 @@ export function withAuth<P extends object>(
     }, [loading, router, pathname]);
 
     // ข้ามการตรวจสอบถ้าอยู่ที่หน้าหลัก
-    if (pathname === "/") {
+    if (isPublicPath()) {
       return <Component {...props} />;
     }
 

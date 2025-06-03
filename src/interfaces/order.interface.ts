@@ -61,3 +61,5 @@ export interface CreateOrderRequest {
   orderLines: OrderLine[];
   totalAmount: number;
 }
+
+// ---------------------- SOCKET INTERFACES ----------------------
