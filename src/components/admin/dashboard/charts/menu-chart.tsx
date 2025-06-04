@@ -7,11 +7,13 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { MenuPopularityItem } from "@/interfaces/dashboard.interface";
+import { useId } from "react";
 
 export function MenuChart({ data }: { data: MenuPopularityItem[] }) {
+  const chartId = useId();
+
   // แปลงข้อมูลให้เหมาะกับการแสดงผล
   const chartData = data.map((item) => ({
-    // ใช้ name หรือ menuName แทนที่จะใช้ menuItemId
     name:
       item.menuName ||
       item.name ||
@@ -38,17 +40,15 @@ export function MenuChart({ data }: { data: MenuPopularityItem[] }) {
       config={chartConfig}
       className="mx-auto aspect-square max-h-[400px] w-full"
     >
-      <PieChart>
+      <PieChart key={`menu-chart-${chartId}`}>
         <ChartTooltip
           cursor={false}
           content={<ChartTooltipContent hideLabel />}
           formatter={(value, name, entry) => {
-            // แก้ไขการเข้าถึง index โดยใช้ dataKey และ payload
             if (!entry || !entry.payload) {
               return ["ไม่มีข้อมูล", ""];
             }
 
-            // หาข้อมูลที่ตรงกับค่าปัจจุบัน
             const matchingData = chartData.find(
               (item) => item.value === value && item.name === entry.payload.name
             );
@@ -75,6 +75,11 @@ export function MenuChart({ data }: { data: MenuPopularityItem[] }) {
           label={({ name, percent }) =>
             `${name} (${(percent * 100).toFixed(0)}%)`
           }
+          // เพิ่ม animation
+          isAnimationActive={true}
+          animationBegin={0}
+          animationDuration={1200}
+          animationEasing="ease-out"
         >
           {chartData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={entry.color} />

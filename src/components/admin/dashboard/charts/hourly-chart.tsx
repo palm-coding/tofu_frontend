@@ -7,10 +7,12 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { HourlySalesItem } from "@/interfaces/dashboard.interface";
+import { useId } from "react";
 
 export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
+  const chartId = useId();
+
   // แปลงข้อมูลให้เหมาะกับการแสดงผล
-  // ใช้ timeRange แทน time, totalSales แทน sales และ count แทน customers
   const chartData = data.map((item) => ({
     time: item.timeRange,
     sales: item.totalSales,
@@ -22,11 +24,11 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
       config={{
         sales: {
           label: "ยอดขาย (บาท)",
-          color: "#F59E0B", // Amber
+          color: "#F59E0B",
         },
         customers: {
           label: "จำนวนออร์เดอร์ (รายการ)",
-          color: "#8B5CF6", // Violet
+          color: "#8B5CF6",
         },
       }}
       className="h-full w-full"
@@ -40,6 +42,8 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
           left: 20,
           bottom: 5,
         }}
+        // เพิ่ม key เพื่อบังคับให้ re-render เมื่อข้อมูลเปลี่ยน
+        key={`hourly-chart-${chartId}`}
       >
         <CartesianGrid vertical={false} stroke="#E5E7EB" />
         <XAxis
@@ -48,7 +52,6 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
           axisLine={false}
           tickMargin={8}
           tick={{ fill: "#6B7280" }}
-          // ลดจำนวน labels ที่แสดงเนื่องจากข้อมูลมี 24 ชั่วโมง
           interval={2}
         />
         <YAxis
@@ -90,6 +93,10 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
             stroke: "#ffffff",
             strokeWidth: 2,
           }}
+          // เพิ่ม animation
+          isAnimationActive={true}
+          animationDuration={1000}
+          animationEasing="ease-out"
         />
         <Line
           yAxisId="right"
@@ -104,6 +111,11 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
             stroke: "#ffffff",
             strokeWidth: 2,
           }}
+          // เพิ่ม animation ที่ช้ากว่าเส้นแรกเล็กน้อย
+          isAnimationActive={true}
+          animationBegin={200}
+          animationDuration={1000}
+          animationEasing="ease-out"
         />
       </LineChart>
     </ChartContainer>

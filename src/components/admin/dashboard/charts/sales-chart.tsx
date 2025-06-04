@@ -7,11 +7,16 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { WeeklySalesItem } from "@/interfaces/dashboard.interface";
+import { useId } from "react";
 
 export function SalesChart({ data }: { data: WeeklySalesItem[] }) {
+  const chartId = useId();
+
+  // เรียงข้อมูลตามวัน
+  const sortedData = [...data].sort((a, b) => a.day - b.day);
+
   // แปลงข้อมูลให้เหมาะกับการแสดงผล
-  // ใช้ dayName แทน name และ totalSales แทน sales
-  const chartData = data.map((item) => ({
+  const chartData = sortedData.map((item) => ({
     name: item.dayName,
     sales: item.totalSales,
   }));
@@ -21,7 +26,7 @@ export function SalesChart({ data }: { data: WeeklySalesItem[] }) {
       config={{
         sales: {
           label: "ยอดขาย (บาท)",
-          color: "#10B981", // Emerald
+          color: "#10B981",
         },
       }}
       className="h-full w-full"
@@ -35,6 +40,8 @@ export function SalesChart({ data }: { data: WeeklySalesItem[] }) {
           left: 20,
           bottom: 5,
         }}
+        // เพิ่ม key เพื่อบังคับให้ re-render เมื่อข้อมูลเปลี่ยน
+        key={`sales-chart-${chartId}`}
       >
         <CartesianGrid vertical={false} stroke="#E5E7EB" />
         <XAxis
@@ -68,6 +75,10 @@ export function SalesChart({ data }: { data: WeeklySalesItem[] }) {
             stroke: "#ffffff",
             strokeWidth: 2,
           }}
+          // เพิ่ม animation
+          isAnimationActive={true}
+          animationDuration={1000}
+          animationEasing="ease-out"
         />
       </LineChart>
     </ChartContainer>

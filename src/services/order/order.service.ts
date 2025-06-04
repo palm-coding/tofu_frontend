@@ -1,3 +1,4 @@
+import { HourlySalesItem, MenuPopularityItem, SalesByPeriodItem, WeeklySalesItem } from "@/interfaces/dashboard.interface";
 import { api } from "../api.service";
 import {
   Order,
@@ -128,16 +129,83 @@ export const orderService = {
     branchId?: string,
     startDate?: string,
     endDate?: string
-  ): Promise<OrderResponse> => {
+  ): Promise<WeeklySalesItem[]> => {
     try {
       const params: Record<string, string> = {};
       if (branchId) params.branchId = branchId;
-      if (startDate) params.startDate = startDate;
-      if (endDate) params.endDate = endDate;
+
+      // แปลงวันที่เป็น Date object ตามที่ backend ต้องการ
+      // หรือส่งเป็น ISO string เพื่อให้ backend แปลงเป็น Date object เอง
+      if (startDate) {
+        // ถ้าเป็นรูปแบบ YYYY-MM-DD ต้องแปลงให้เป็น ISO string เต็มรูปแบบ
+        if (startDate.length === 10 && startDate.includes("-")) {
+          const date = new Date(startDate);
+          date.setHours(0, 0, 0, 0);
+          params.startDate = date.toISOString();
+        } else {
+          params.startDate = startDate;
+        }
+      }
+
+      if (endDate) {
+        // ถ้าเป็นรูปแบบ YYYY-MM-DD ต้องแปลงให้เป็น ISO string เต็มรูปแบบ
+        if (endDate.length === 10 && endDate.includes("-")) {
+          const date = new Date(endDate);
+          // ตั้งเวลาเป็น 23:59:59 ของวันนั้น เพื่อให้ครอบคลุมทั้งวัน
+          date.setHours(23, 59, 59, 999);
+          params.endDate = date.toISOString();
+        } else {
+          params.endDate = endDate;
+        }
+      }
+
+      console.log("Fetching weekly sales with params:", params);
 
       const response = await api.get("/orders/analytics/weekly-sales", {
         params,
       });
+
+      // เมื่อได้รับข้อมูลกลับมา ให้ตรวจสอบและเติมเต็มข้อมูลที่อาจหายไป
+      const data = response.data;
+
+      // สร้างข้อมูลครบทุกวันในสัปดาห์
+      if (Array.isArray(data)) {
+        // สร้าง map ของวันที่มีข้อมูล
+        const daysMap = new Map();
+        data.forEach((item) => {
+          daysMap.set(item.day, item);
+        });
+
+        // ตรวจสอบว่ามีข้อมูลครบทุกวันหรือไม่ (1-7)
+        const daysOfWeek = [
+          "อาทิตย์",
+          "จันทร์",
+          "อังคาร",
+          "พุธ",
+          "พฤหัสบดี",
+          "ศุกร์",
+          "เสาร์",
+        ];
+        const fullData = [];
+
+        for (let i = 1; i <= 7; i++) {
+          if (daysMap.has(i)) {
+            fullData.push(daysMap.get(i));
+          } else {
+            // เพิ่มข้อมูลว่างสำหรับวันที่ไม่มีข้อมูล
+            fullData.push({
+              day: i,
+              dayName: daysOfWeek[(i - 1) % 7],
+              totalSales: 0,
+              count: 0,
+            });
+          }
+        }
+
+        console.log("Weekly sales after filling missing days:", fullData);
+        return fullData;
+      }
+
       console.log("Weekly sales response:", response.data);
       return response.data;
     } catch (error) {
@@ -152,7 +220,7 @@ export const orderService = {
     limit: number = 10,
     startDate?: string,
     endDate?: string
-  ): Promise<OrderResponse> => {
+  ): Promise<MenuPopularityItem[]> => {
     try {
       const params: Record<string, string | number> = { limit };
       if (branchId) params.branchId = branchId;
@@ -174,7 +242,7 @@ export const orderService = {
   getHourlySales: async (
     branchId?: string,
     date?: string
-  ): Promise<OrderResponse> => {
+  ): Promise<HourlySalesItem[]> => {
     try {
       const params: Record<string, string> = {};
       if (branchId) params.branchId = branchId;
@@ -198,7 +266,7 @@ export const orderService = {
     startDate?: string,
     endDate?: string,
     groupBy: "hour" | "day" | "week" | "month" = "day"
-  ): Promise<OrderResponse> => {
+  ): Promise<SalesByPeriodItem[]> => {
     try {
       const params: Record<string, string> = { groupBy };
       if (branchId) params.branchId = branchId;

@@ -7,14 +7,20 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { WeeklySalesItem } from "@/interfaces/dashboard.interface";
+import { useId } from "react";
 
 export function OverviewChart({ data }: { data: WeeklySalesItem[] }) {
+  // สร้าง unique ID สำหรับแต่ละครั้งที่ข้อมูลเปลี่ยนแปลง
+  const chartId = useId();
+
+  // เรียงข้อมูลตามวัน
+  const sortedData = [...data].sort((a, b) => a.day - b.day);
+
   // แปลงข้อมูลให้เหมาะกับการแสดงผล
-  // ใช้ dayName แทน name และ totalSales แทน sales
-  const chartData = data.map((item) => ({
-    name: item.dayName,
-    sales: item.totalSales,
-    count: item.count,
+  const chartData = sortedData.map((item) => ({
+    name: item.dayName || `วัน ${item.day}`,
+    sales: item.totalSales || 0,
+    count: item.count || 0,
   }));
 
   return (
@@ -22,11 +28,11 @@ export function OverviewChart({ data }: { data: WeeklySalesItem[] }) {
       config={{
         sales: {
           label: "ยอดขาย (บาท)",
-          color: "#F5BF0F", // Yellow
+          color: "#F5BF0F",
         },
         count: {
           label: "จำนวนออร์เดอร์",
-          color: "#3B82F6", // Blue
+          color: "#3B82F6",
         },
       }}
       className="h-full w-full"
@@ -40,6 +46,8 @@ export function OverviewChart({ data }: { data: WeeklySalesItem[] }) {
           left: 20,
           bottom: 5,
         }}
+        // เพิ่ม key เพื่อบังคับให้ re-render เมื่อข้อมูลเปลี่ยน
+        key={`overview-chart-${chartId}`}
       >
         <CartesianGrid vertical={false} stroke="#E5E7EB" />
         <XAxis
@@ -64,7 +72,15 @@ export function OverviewChart({ data }: { data: WeeklySalesItem[] }) {
             name === "sales" ? "ยอดขาย" : "จำนวนออร์เดอร์",
           ]}
         />
-        <Bar dataKey="sales" fill="#F5BF0F" radius={[4, 4, 0, 0]} />
+        <Bar
+          dataKey="sales"
+          fill="#F5BF0F"
+          radius={[4, 4, 0, 0]}
+          // เพิ่ม animation
+          animationDuration={800}
+          animationEasing="ease-in-out"
+          isAnimationActive={true}
+        />
       </BarChart>
     </ChartContainer>
   );
