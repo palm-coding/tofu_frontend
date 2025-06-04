@@ -9,6 +9,13 @@ import {
 import type { WeeklySalesItem } from "@/interfaces/dashboard.interface";
 
 export function SalesChart({ data }: { data: WeeklySalesItem[] }) {
+  // แปลงข้อมูลให้เหมาะกับการแสดงผล
+  // ใช้ dayName แทน name และ totalSales แทน sales
+  const chartData = data.map((item) => ({
+    name: item.dayName,
+    sales: item.totalSales,
+  }));
+
   return (
     <ChartContainer
       config={{
@@ -21,7 +28,7 @@ export function SalesChart({ data }: { data: WeeklySalesItem[] }) {
     >
       <LineChart
         accessibilityLayer
-        data={data}
+        data={chartData}
         margin={{
           top: 20,
           right: 30,

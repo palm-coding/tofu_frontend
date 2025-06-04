@@ -9,8 +9,23 @@ import {
 import type { MenuPopularityItem } from "@/interfaces/dashboard.interface";
 
 export function MenuChart({ data }: { data: MenuPopularityItem[] }) {
-  // Create chart config from data
-  const chartConfig = data.reduce((config, item) => {
+  // แปลงข้อมูลให้เหมาะกับการแสดงผล
+  const chartData = data.map((item) => ({
+    // ใช้ name หรือ menuName แทนที่จะใช้ menuItemId
+    name:
+      item.menuName ||
+      item.name ||
+      (item.menuItemId
+        ? `เมนู ${item.menuItemId?.substring(0, 6)}...`
+        : "ไม่ระบุ"),
+    value: item.totalCount || 0,
+    percentage: item.percentage || 0,
+    price: item.price || 0,
+    color: item.color || "#CCCCCC",
+  }));
+
+  // สร้าง chart config จากข้อมูล
+  const chartConfig = chartData.reduce((config, item) => {
     config[item.name] = {
       label: item.name,
       color: item.color,
@@ -27,10 +42,30 @@ export function MenuChart({ data }: { data: MenuPopularityItem[] }) {
         <ChartTooltip
           cursor={false}
           content={<ChartTooltipContent hideLabel />}
-          formatter={(value) => [`${value} รายการ`, ""]}
+          formatter={(value, name, entry) => {
+            // แก้ไขการเข้าถึง index โดยใช้ dataKey และ payload
+            if (!entry || !entry.payload) {
+              return ["ไม่มีข้อมูล", ""];
+            }
+
+            // หาข้อมูลที่ตรงกับค่าปัจจุบัน
+            const matchingData = chartData.find(
+              (item) => item.value === value && item.name === entry.payload.name
+            );
+            if (!matchingData) {
+              return ["ไม่มีข้อมูล", ""];
+            }
+
+            return [
+              `${value} รายการ (${matchingData.percentage.toFixed(1)}%) - ฿${
+                matchingData.price
+              }`,
+              matchingData.name,
+            ];
+          }}
         />
         <Pie
-          data={data}
+          data={chartData}
           dataKey="value"
           nameKey="name"
           cx="50%"
@@ -41,7 +76,7 @@ export function MenuChart({ data }: { data: MenuPopularityItem[] }) {
             `${name} (${(percent * 100).toFixed(0)}%)`
           }
         >
-          {data.map((entry, index) => (
+          {chartData.map((entry, index) => (
             <Cell key={`cell-${index}`} fill={entry.color} />
           ))}
         </Pie>

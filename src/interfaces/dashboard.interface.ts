@@ -9,47 +9,48 @@ export interface DashboardStatItem {
   change?: number;
 }
 
-// Weekly sales data
+// Weekly sales data จาก /orders/analytics/weekly-sales
 export interface WeeklySalesItem {
-  name: string; // Day name
-  sales: number;
+  totalSales: number;
+  count: number;
+  day: number;
+  dayName: string;
 }
 
-// Popular menu items
+// Popular menu items จาก /orders/analytics/popular-menu
 export interface MenuPopularityItem {
-  name: string;
-  value: number;
-  color: string;
+  totalCount: number;
+  orders: number;
+  menuItemId: string;
+  name: string; // เพิ่มชื่อเมนูจริงจาก API
+  price: number; // เพิ่มราคาเมนูจาก API
+  menuName?: string; // เก็บไว้สำหรับการ override ชื่อเมนูถ้าจำเป็น
+  percentage: number;
+  color?: string; // เพิ่มเพื่อใช้กำหนดสีในกราฟ
 }
 
-// Hourly sales and customer data
+// Hourly sales data จาก /orders/analytics/hourly-sales
 export interface HourlySalesItem {
-  time: string;
-  customers: number;
-  sales: number;
+  hour: number;
+  timeRange: string;
+  totalSales: number;
+  count: number;
 }
 
-// Dashboard data response interfaces
-export interface DashboardStatsResponse {
-  stats: DashboardStatItem[];
-}
-
-export interface WeeklySalesResponse {
-  salesData: WeeklySalesItem[];
-}
-
-export interface MenuPopularityResponse {
-  menuData: MenuPopularityItem[];
-}
-
-export interface HourlySalesResponse {
-  hourlyData: HourlySalesItem[];
+// Sales by period data จาก /orders/analytics/sales-by-period
+export interface SalesByPeriodItem {
+  period: string;
+  totalSales: number;
+  orderCount: number;
+  customerCount: number;
+  averageOrderValue: number;
 }
 
 // Combined dashboard data
 export interface DashboardDataResponse {
   stats: DashboardStatItem[];
-  salesData: WeeklySalesItem[];
-  menuData: MenuPopularityItem[];
-  hourlyData: HourlySalesItem[];
+  weeklySales: WeeklySalesItem[];
+  popularMenus: MenuPopularityItem[];
+  hourlySales: HourlySalesItem[];
+  salesByPeriod: SalesByPeriodItem[];
 }

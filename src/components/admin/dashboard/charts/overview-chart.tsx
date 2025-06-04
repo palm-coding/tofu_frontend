@@ -9,19 +9,31 @@ import {
 import type { WeeklySalesItem } from "@/interfaces/dashboard.interface";
 
 export function OverviewChart({ data }: { data: WeeklySalesItem[] }) {
+  // แปลงข้อมูลให้เหมาะกับการแสดงผล
+  // ใช้ dayName แทน name และ totalSales แทน sales
+  const chartData = data.map((item) => ({
+    name: item.dayName,
+    sales: item.totalSales,
+    count: item.count,
+  }));
+
   return (
     <ChartContainer
       config={{
         sales: {
           label: "ยอดขาย (บาท)",
-          color: "#F5BF0F", // Blue
+          color: "#F5BF0F", // Yellow
+        },
+        count: {
+          label: "จำนวนออร์เดอร์",
+          color: "#3B82F6", // Blue
         },
       }}
       className="h-full w-full"
     >
       <BarChart
         accessibilityLayer
-        data={data}
+        data={chartData}
         margin={{
           top: 20,
           right: 30,
@@ -46,8 +58,11 @@ export function OverviewChart({ data }: { data: WeeklySalesItem[] }) {
         />
         <ChartTooltip
           cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
-          content={<ChartTooltipContent hideLabel />}
-          formatter={(value) => [`฿${value}`, "ยอดขาย"]}
+          content={<ChartTooltipContent />}
+          formatter={(value, name) => [
+            name === "sales" ? `฿${value}` : `${value} ออร์เดอร์`,
+            name === "sales" ? "ยอดขาย" : "จำนวนออร์เดอร์",
+          ]}
         />
         <Bar dataKey="sales" fill="#F5BF0F" radius={[4, 4, 0, 0]} />
       </BarChart>

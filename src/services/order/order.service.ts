@@ -123,6 +123,99 @@ export const orderService = {
     }
   },
 
+  // GET /orders/analytics/weekly-sales
+  getWeeklySales: async (
+    branchId?: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<OrderResponse> => {
+    try {
+      const params: Record<string, string> = {};
+      if (branchId) params.branchId = branchId;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const response = await api.get("/orders/analytics/weekly-sales", {
+        params,
+      });
+      console.log("Weekly sales response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch weekly sales:", error);
+      throw error;
+    }
+  },
+
+  // GET /orders/analytics/popular-menu
+  getPopularMenuItems: async (
+    branchId?: string,
+    limit: number = 10,
+    startDate?: string,
+    endDate?: string
+  ): Promise<OrderResponse> => {
+    try {
+      const params: Record<string, string | number> = { limit };
+      if (branchId) params.branchId = branchId;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const response = await api.get("/orders/analytics/popular-menu", {
+        params,
+      });
+      console.log("Popular menu items response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch popular menu items:", error);
+      throw error;
+    }
+  },
+
+  // GET /orders/analytics/hourly-sales
+  getHourlySales: async (
+    branchId?: string,
+    date?: string
+  ): Promise<OrderResponse> => {
+    try {
+      const params: Record<string, string> = {};
+      if (branchId) params.branchId = branchId;
+      if (date) params.date = date;
+
+      const response = await api.get("/orders/analytics/hourly-sales", {
+        params,
+      });
+      console.log("Hourly sales response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch hourly sales:", error);
+      throw error;
+    }
+  },
+
+  // GET /orders/analytics/sales-by-period
+
+  getSalesByTimePeriod: async (
+    branchId?: string,
+    startDate?: string,
+    endDate?: string,
+    groupBy: "hour" | "day" | "week" | "month" = "day"
+  ): Promise<OrderResponse> => {
+    try {
+      const params: Record<string, string> = { groupBy };
+      if (branchId) params.branchId = branchId;
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const response = await api.get("/orders/analytics/sales-by-period", {
+        params,
+      });
+      console.log("Sales by time period response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch sales by time period:", error);
+      throw error;
+    }
+  },
+
   // PATCH /orders/:id
   updateOrder: async (
     orderId: string,

@@ -9,6 +9,14 @@ import {
 import type { HourlySalesItem } from "@/interfaces/dashboard.interface";
 
 export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
+  // แปลงข้อมูลให้เหมาะกับการแสดงผล
+  // ใช้ timeRange แทน time, totalSales แทน sales และ count แทน customers
+  const chartData = data.map((item) => ({
+    time: item.timeRange,
+    sales: item.totalSales,
+    customers: item.count,
+  }));
+
   return (
     <ChartContainer
       config={{
@@ -17,7 +25,7 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
           color: "#F59E0B", // Amber
         },
         customers: {
-          label: "จำนวนลูกค้า (คน)",
+          label: "จำนวนออร์เดอร์ (รายการ)",
           color: "#8B5CF6", // Violet
         },
       }}
@@ -25,7 +33,7 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
     >
       <LineChart
         accessibilityLayer
-        data={data}
+        data={chartData}
         margin={{
           top: 20,
           right: 30,
@@ -40,6 +48,8 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
           axisLine={false}
           tickMargin={8}
           tick={{ fill: "#6B7280" }}
+          // ลดจำนวน labels ที่แสดงเนื่องจากข้อมูลมี 24 ชั่วโมง
+          interval={2}
         />
         <YAxis
           yAxisId="left"
@@ -56,15 +66,15 @@ export function HourlyChart({ data }: { data: HourlySalesItem[] }) {
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          tickFormatter={(value) => `${value} คน`}
+          tickFormatter={(value) => `${value} รายการ`}
           tick={{ fill: "#8B5CF6" }}
         />
         <ChartTooltip
           cursor={false}
           content={<ChartTooltipContent />}
           formatter={(value, name) => [
-            name === "sales" ? `฿${value}` : `${value} คน`,
-            name === "sales" ? "ยอดขาย" : "จำนวนลูกค้า",
+            name === "sales" ? `฿${value}` : `${value} รายการ`,
+            name === "sales" ? "ยอดขาย" : "จำนวนออร์เดอร์",
           ]}
         />
         <Line
