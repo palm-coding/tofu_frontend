@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,23 +15,17 @@ import {
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { stockService } from "@/services/stock.service";
-import type {
-  Ingredient,
-  Stock,
-  CreateIngredientDto,
-} from "@/interfaces/stock.interface";
+import { ingredientService } from "@/services/ingredient.service";
+import type { CreateIngredientDto } from "@/interfaces/ingredient.interface";
+import type { Stock } from "@/interfaces/stock.interface";
 
 interface AddIngredientDialogProps {
-  ingredients: Ingredient[];
-  setIngredients: (value: Ingredient[]) => void;
   stocks: Stock[];
   setStocks: (value: Stock[]) => void;
-  branchId?: string;
+  branchId: string;
 }
 
 export function AddIngredientDialog({
-  ingredients,
-  setIngredients,
   stocks,
   setStocks,
   branchId,
@@ -41,33 +37,73 @@ export function AddIngredientDialog({
     unit: "",
   });
 
+  const isValid =
+    newIngredient.name.trim() !== "" && newIngredient.unit.trim() !== "";
+
   const handleSubmit = async () => {
-    if (!newIngredient.name.trim() || !newIngredient.unit.trim()) return;
+    if (!isValid) return;
 
     try {
       setLoading(true);
 
-      // Add new ingredient
-      const response = await stockService.addIngredient(newIngredient);
-      setIngredients([...ingredients, response.ingredient]);
+      // 1. Add new ingredient with proper response validation
+      const ingredientResponse = await ingredientService.addIngredient(
+        newIngredient
+      );
 
-      if (!branchId) {
-        console.error("Branch ID is required to create stock");
-        return;
+      // Validate ingredient response structure
+      if (
+        !ingredientResponse ||
+        !ingredientResponse.ingredient ||
+        !ingredientResponse.ingredient.id
+      ) {
+        console.error(
+          "❌ Invalid ingredient response structure:",
+          ingredientResponse
+        );
+        throw new Error("Invalid response from ingredient service");
       }
 
-      // Create initial stock for this ingredient
+      const ingredientId = ingredientResponse.ingredient.id;
+      console.log("✅ Ingredient created successfully:", ingredientId);
+
+      // 2. Create stock for this ingredient with proper response validation
       const stockResponse = await stockService.createStock(
         branchId,
-        response.ingredient.id
+        ingredientId
       );
+
+      // Validate stock response structure
+      if (!stockResponse || !stockResponse.stock) {
+        console.error("❌ Invalid stock response structure:", stockResponse);
+        throw new Error("Invalid response from stock service");
+      }
+
+      console.log("✅ Stock created successfully:", stockResponse.stock);
+
+      // 3. Update stock state
       setStocks([...stocks, stockResponse.stock]);
 
-      // Reset form and close dialog
+      // 4. Reset form and close dialog
       setNewIngredient({ name: "", unit: "" });
       setOpen(false);
-    } catch (error) {
-      console.error("Failed to add ingredient:", error);
+
+      console.log("✅ Ingredient and stock added successfully");
+    } catch (error: any) {
+      console.error("❌ Failed to add ingredient:");
+
+      if (error.response) {
+        console.error("🔴 Server responded with:", error.response.data);
+        console.error("🔴 Status code:", error.response.status);
+        console.error("🔴 Headers:", error.response.headers);
+      } else if (error.request) {
+        console.error("🟠 No response received:", error.request);
+      } else {
+        console.error("⚠️ Error setting up request:", error.message);
+      }
+
+      // Optional: Show user-friendly error message
+      // You could add a toast notification here or set an error state
     } finally {
       setLoading(false);
     }
@@ -96,10 +132,10 @@ export function AddIngredientDialog({
               placeholder="เช่น แป้งสาลี, น้ำตาล, เนื้อหมู"
               value={newIngredient.name}
               onChange={(e) =>
-                setNewIngredient({
-                  ...newIngredient,
+                setNewIngredient((prev) => ({
+                  ...prev,
                   name: e.target.value,
-                })
+                }))
               }
             />
           </div>
@@ -110,10 +146,10 @@ export function AddIngredientDialog({
               placeholder="เช่น กิโลกรัม, ลิตร, กล่อง, ถุง"
               value={newIngredient.unit}
               onChange={(e) =>
-                setNewIngredient({
-                  ...newIngredient,
+                setNewIngredient((prev) => ({
+                  ...prev,
                   unit: e.target.value,
-                })
+                }))
               }
             />
           </div>
@@ -126,14 +162,7 @@ export function AddIngredientDialog({
           >
             ยกเลิก
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={
-              loading ||
-              !newIngredient.name.trim() ||
-              !newIngredient.unit.trim()
-            }
-          >
+          <Button onClick={handleSubmit} disabled={loading || !isValid}>
             {loading ? "กำลังเพิ่ม..." : "เพิ่มวัตถุดิบ"}
           </Button>
         </DialogFooter>

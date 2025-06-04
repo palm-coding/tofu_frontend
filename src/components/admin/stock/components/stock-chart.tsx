@@ -1,13 +1,14 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Stock, Ingredient } from "@/interfaces/stock.interface";
+import type { Stock } from "@/interfaces/stock.interface";
 
 interface StockChartProps {
   stocks: Stock[];
-  getIngredient: (id: string) => Ingredient | undefined;
 }
 
-export function StockChart({ stocks, getIngredient }: StockChartProps) {
+export function StockChart({ stocks }: StockChartProps) {
   // Calculate max value for chart scaling
   const maxQuantity = Math.max(...stocks.map((stock) => stock.quantity), 100);
 
@@ -21,14 +22,12 @@ export function StockChart({ stocks, getIngredient }: StockChartProps) {
       <CardContent>
         <div className="space-y-4">
           {stocks.map((stock) => {
-            const ingredient = getIngredient(stock.ingredientId);
-            if (!ingredient) return null;
-
+            const ingredient = stock.ingredientId as any;
             const percentage = (stock.quantity / maxQuantity) * 100;
             const isLowStock = stock.quantity <= stock.lowThreshold;
 
             return (
-              <div key={stock.id} className="space-y-2">
+              <div key={stock._id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
@@ -45,9 +44,9 @@ export function StockChart({ stocks, getIngredient }: StockChartProps) {
                   </span>
                 </div>
 
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-3 relative">
                   <div
-                    className={`h-3 rounded-full transition-all duration-300 ${
+                    className={`h-3 rounded-full transition-all duration-500 ${
                       isLowStock
                         ? "bg-red-500"
                         : stock.quantity <= stock.lowThreshold * 1.5
@@ -55,6 +54,14 @@ export function StockChart({ stocks, getIngredient }: StockChartProps) {
                         : "bg-green-500"
                     }`}
                     style={{ width: `${Math.max(percentage, 2)}%` }}
+                  />
+                  {/* Threshold indicator */}
+                  <div
+                    className="absolute top-0 h-3 w-0.5 bg-gray-600"
+                    style={{
+                      left: `${(stock.lowThreshold / maxQuantity) * 100}%`,
+                    }}
+                    title={`เกณฑ์ต่ำสุด: ${stock.lowThreshold} ${ingredient.unit}`}
                   />
                 </div>
 
