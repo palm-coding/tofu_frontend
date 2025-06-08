@@ -1,54 +1,34 @@
-export interface Ingredient {
-  id: string;
-  name: string;
-  unit: string;
-}
+import type { Ingredient } from "./ingredient.interface"; // ถ้ามี
+import type { Branch } from "./branch.interface"; // ถ้ามี
 
 export interface Stock {
-  id: string;
-  branchId: string;
-  ingredientId: string;
+  _id: string;
+  branchId: Branch | string;
+  ingredientId: Ingredient;
   quantity: number;
   lowThreshold: number;
-}
-
-export interface StockWithIngredient extends Stock {
-  ingredient: Ingredient;
-}
-
-// DTOs for API requests
-export interface CreateIngredientDto {
-  name: string;
-  unit: string;
-}
-
-export interface UpdateIngredientDto {
-  name?: string;
-  unit?: string;
+  updatedAt: string;
+  __v: number;
 }
 
 export interface AdjustStockDto {
   quantity: number;
+  type: "add" | "remove"; // or whatever your backend expects
+}
+
+export interface StockAdjustment {
+  id: string;
+  stockId: string;
+  quantity: number;
   type: "add" | "remove";
-}
-
-export interface UpdateThresholdDto {
-  lowThreshold: number;
-}
-
-// API responses
-export interface IngredientsResponse {
-  ingredients: Ingredient[];
-}
-
-export interface IngredientResponse {
-  ingredient: Ingredient;
-}
-
-export interface StocksResponse {
-  stocks: Stock[];
+  reason?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface StockResponse {
-  stock: Stock;
+  success: boolean;
+  stocks: Stock[];
+  data?: Stock[];
+  message?: string;
 }

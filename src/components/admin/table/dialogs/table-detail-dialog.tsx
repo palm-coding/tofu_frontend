@@ -376,12 +376,8 @@ export function TableDetailDialog({
   // ตรวจสอบว่ามีออร์เดอร์ที่ยังไม่ได้ชำระเงินหรือไม่
   const hasUnpaidOrders = orders.some((order) => order.status !== "paid");
 
-  // ตรวจสอบว่า payment ปัจจุบันเป็น "paid" หรือ "successful" หรือไม่
-  const isPaymentSuccessful =
-    currentPayment?.status === "paid" ||
-    currentPayment?.status === "successful" ||
-    (currentPayment?.paymentDetails &&
-      (currentPayment?.paymentDetails as any)?.status === "successful");
+  // ตรวจสอบว่า payment ปัจจุบันเป็น "paid" หรือไม่
+  const isPaymentSuccessful = currentPayment?.status === "paid";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

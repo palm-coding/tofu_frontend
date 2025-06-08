@@ -1,165 +1,131 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, AlertTriangle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { stockService } from "@/services/stock.service";
-import type { Ingredient, Stock } from "@/interfaces/stock.interface";
+import type { Stock } from "@/interfaces/stock.interface";
+import { Badge } from "@/components/ui/badge";
+import { Package } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StockTable } from "./stock-table";
+import { StockCharts } from "./stock-chart";
+import { toast } from "sonner";
 
-import { StockHeader } from "./stock-header";
-import { LowStockAlert } from "./low-stock-alert";
-import { IngredientTable } from "./ingredient-table";
-import { StockChart } from "./charts/stock-chart";
-import { Branch } from "@/interfaces/branch.interface";
-
-interface StockDisplayProps {
-  branchCode: string;
-  branchId?: string;
-  branch?: Branch | null;
-}
-
-export function StockDisplay({ branchId }: StockDisplayProps) {
-  console.log("branchId", branchId);
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+export function StockDisplay({ branchId }: { branchId: string }) {
   const [stocks, setStocks] = useState<Stock[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const lowStockCount = stocks.filter(
+    (stock) => stock.quantity <= stock.lowThreshold
+  ).length;
+
   useEffect(() => {
-    async function fetchStockData() {
+    async function loadData() {
       try {
         setLoading(true);
         setError(null);
-        // ใช้ "branch1" สำหรับการพัฒนาแทน branchId จริงที่ถูกส่งมา
-        const mockBranchId = "branch1";
 
-        const [ingredientsRes, stocksRes] = await Promise.all([
-          stockService.getIngredients(),
-          stockService.getStocks(mockBranchId), // ใช้ mockBranchId แทน
-        ]);
-        setIngredients(ingredientsRes.ingredients);
-        setStocks(stocksRes.stocks);
-        console.log("Fetched ingredients:", ingredientsRes.ingredients);
-        console.log("Fetched stocks:", stocksRes.stocks);
+        if (!branchId) {
+          setError("ไม่พบข้อมูลสาขา กรุณาลองอีกครั้ง");
+          return;
+        }
+
+        const stocksResponse = await stockService.getStocks(branchId);
+        console.log("Stocks response:", stocksResponse);
+
+        if (Array.isArray(stocksResponse?.data)) {
+          setStocks(stocksResponse.data);
+        } else {
+          setStocks([]);
+        }
       } catch (err) {
         console.error("Error loading stock data:", err);
         setError("ไม่สามารถโหลดข้อมูลสต็อกได้ กรุณาลองอีกครั้ง");
+        setStocks([]);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchStockData();
+    loadData();
   }, [branchId]);
 
-  const getIngredient = (ingredientId: string) =>
-    ingredients.find((ing) => ing.id === ingredientId);
+  const handleAdjustStock = async (
+    stockId: string,
+    newQuantity: number,
+    adjustmentType: "add" | "subtract" | "set"
+  ) => {
+    try {
+      // Update the stock via your API service
+      // You'll need to implement this method in your stockService
+      await stockService.updateStock(stockId, { quantity: newQuantity });
 
-  const lowStockItems = stocks.filter(
-    (stock) => stock.quantity <= stock.lowThreshold
-  );
+      // Update local state
+      setStocks((prevStocks) =>
+        prevStocks.map((stock) =>
+          stock._id === stockId ? { ...stock, quantity: newQuantity } : stock
+        )
+      );
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin mr-2" />
-        <p>กำลังโหลดข้อมูลสต็อก...</p>
-      </div>
-    );
-  }
+      // Show success message
+      const actionText =
+        adjustmentType === "add"
+          ? "เพิ่ม"
+          : adjustmentType === "subtract"
+          ? "ลด"
+          : "กำหนด";
 
-  if (error) {
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>เกิดข้อผิดพลาด</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-          <button
-            className="mt-2 bg-destructive text-white py-1 px-3 rounded"
-            onClick={() => window.location.reload()}
-          >
-            ลองใหม่อีกครั้ง
-          </button>
-        </Alert>
-      </div>
-    );
-  }
+      try {
+        toast.success(
+          `ปรับปริมาณสต็อกสำเร็จ\n${actionText}ปริมาณสต็อกเรียบร้อยแล้ว`
+        );
+      } catch (err) {
+        console.error(err);
+        toast.error(
+          "เกิดข้อผิดพลาด: ไม่สามารถปรับปริมาณสต็อกได้ กรุณาลองอีกครั้ง"
+        );
+      }
+    } catch (error) {
+      throw error; // Re-throw to handle in dialog
+    }
+  };
 
   return (
     <div className="p-6">
-      <div className="flex flex-col space-y-6">
-        <StockHeader
-          ingredients={ingredients}
-          setIngredients={setIngredients}
-          stocks={stocks}
-          setStocks={setStocks}
-          branchId={branchId}
-        />
-
-        {lowStockItems.length > 0 && (
-          <LowStockAlert count={lowStockItems.length} />
-        )}
-
-        {stocks.length === 0 ? (
-          <div className="bg-muted p-8 rounded-lg text-center">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 text-amber-600 mb-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium mb-2">ยังไม่มีข้อมูลสต็อก</h3>
-            <p className="text-muted-foreground mb-4">
-              เพิ่มวัตถุดิบเพื่อเริ่มต้นการจัดการสต็อกสำหรับสาขานี้
-            </p>
-            <button
-              onClick={() => {
-                // สร้าง stock สำหรับวัตถุดิบที่มีอยู่แล้วทั้งหมด
-                ingredients.forEach(async (ingredient) => {
-                  if (!branchId) {
-                    console.error("Branch ID is required to create stock");
-                    return;
-                  }
-                  try {
-                    const response = await stockService.createStock(
-                      branchId,
-                      ingredient.id
-                    );
-                    setStocks((prevStocks) => [...prevStocks, response.stock]);
-                  } catch (err) {
-                    console.error("Error creating stock:", err);
-                  }
-                });
-              }}
-              className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors"
-            >
-              สร้าง Stock ทั้งหมด
-            </button>
-          </div>
+      <div className="flex flex-col space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">รายละเอียดสต็อก</h1>
+        <p className="text-muted-foreground">
+          ภาพรวมและรายงานของรายละเอียดสต็อก
+        </p>
+      </div>
+      <div className="mt-6 flex flex-col space-y-4">
+        {loading ? (
+          <p>กำลังโหลดข้อมูล...</p>
+        ) : error ? (
+          <p className="text-red-500">{error}</p>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <StockChart stocks={stocks} getIngredient={getIngredient} />
-
-            <IngredientTable
-              stocks={stocks}
-              ingredients={ingredients}
-              getIngredient={getIngredient}
-              branchId={branchId}
-              setIngredients={setIngredients}
-              setStocks={setStocks}
-            />
-          </div>
+          <Card className="w-full">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                  <Package className="h-5 w-5" />
+                  ตารางรายละเอียดสต็อก
+                </CardTitle>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <span>รวม {stocks.length} รายการ</span>
+                  {lowStockCount > 0 && (
+                    <Badge variant="destructive" className="text-xs">
+                      ใกล้หมด {lowStockCount} รายการ
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-4">
+              <StockCharts stocks={stocks} />
+              <StockTable stocks={stocks} onAdjustStock={handleAdjustStock} />
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

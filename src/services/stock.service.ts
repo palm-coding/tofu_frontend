@@ -1,327 +1,143 @@
-// import axios from "axios";
-import {
-  AdjustStockDto,
-  CreateIngredientDto,
-  Ingredient,
-  IngredientResponse,
-  IngredientsResponse,
-  Stock,
-  StockResponse,
-  StocksResponse,
-  UpdateIngredientDto,
-  UpdateThresholdDto,
-} from "@/interfaces/stock.interface";
+// services/stock.service.ts
 
-// const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+import axios from "axios";
+import type { StockResponse } from "@/interfaces/stock.interface";
 
-// const api = axios.create({
-//   baseURL: API_URL,
-//   withCredentials: true,
-// });
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-// Mock data for ingredients
-const mockIngredients: Ingredient[] = [
-  { id: "ing1", name: "ถั่วเหลือง", unit: "กิโลกรัม" },
-  { id: "ing2", name: "น้ำตาล", unit: "กิโลกรัม" },
-  { id: "ing3", name: "แป้ง", unit: "กิโลกรัม" },
-  { id: "ing4", name: "น้ำแข็ง", unit: "กิโลกรัม" },
-  { id: "ing5", name: "นมข้นหวาน", unit: "กระป๋อง" },
-];
-
-// Mock data for stock
-const mockStocks: Stock[] = [
-  {
-    id: "stock1",
-    branchId: "branch1",
-    ingredientId: "ing1",
-    quantity: 25,
-    lowThreshold: 5,
-  },
-  {
-    id: "stock2",
-    branchId: "branch1",
-    ingredientId: "ing2",
-    quantity: 10,
-    lowThreshold: 3,
-  },
-  {
-    id: "stock3",
-    branchId: "branch1",
-    ingredientId: "ing3",
-    quantity: 15,
-    lowThreshold: 5,
-  },
-  {
-    id: "stock4",
-    branchId: "branch1",
-    ingredientId: "ing4",
-    quantity: 2,
-    lowThreshold: 5,
-  },
-  {
-    id: "stock5",
-    branchId: "branch1",
-    ingredientId: "ing5",
-    quantity: 8,
-    lowThreshold: 3,
-  },
-];
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+});
 
 export const stockService = {
-  // Get all ingredients
-  getIngredients: async (): Promise<IngredientsResponse> => {
+  // Get all stocks for a specific branch
+  getStocks: async (branchId: string): Promise<StockResponse> => {
+    console.log(`Fetching stocks for branch ${branchId}`);
     try {
-      // In a real app, we would call the API:
-      // const response = await api.get('/ingredients');
-      // return response.data;
-
-      // For now, simulate API call with mock data
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({ ingredients: mockIngredients });
-        }, 500); // Simulate network delay
-      });
+      const response = await api.get(`/stocks/`);
+      console.log("Fetched stocks:", response.data);
+      return response.data;
     } catch (error) {
-      console.error("Failed to fetch ingredients:", error);
+      console.error("Failed to fetch stocks:", error);
       throw error;
     }
   },
 
-  // Get stocks for a specific branch
-  getStocks: async (branchId: string): Promise<StocksResponse> => {
+  // Get a specific stock item
+  getStockById: async (
+    branchId: string,
+    stockId: string
+  ): Promise<StockResponse> => {
+    console.log(`Fetching stock ${stockId} for branch ${branchId}`);
     try {
-      // In a real app:
-      // const response = await api.get(`/branches/${branchId}/stocks`);
-      // return response.data;
-
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          // แก้ไขส่วนนี้ - ใช้ branchId ที่ส่งเข้ามาแทนที่จะ filter
-          // เพื่อให้สามารถใช้ mock data ได้ในทุกกรณี
-          const branchStocks = mockStocks.map((stock) => ({
-            ...stock,
-            branchId: branchId, // กำหนด branchId ตามที่ส่งเข้ามา
-          }));
-
-          resolve({ stocks: branchStocks });
-        }, 500);
-      });
+      const response = await api.get(`/branches/stocks/${stockId}`);
+      console.log("Fetched stock:", response.data);
+      return response.data;
     } catch (error) {
-      console.error(`Failed to fetch stocks for branch ${branchId}:`, error);
+      console.error(`Failed to fetch stock ${stockId}:`, error);
       throw error;
     }
   },
 
-  // Add a new ingredient
-  addIngredient: async (
-    ingredientData: CreateIngredientDto
-  ): Promise<IngredientResponse> => {
-    try {
-      // In a real app:
-      // const response = await api.post('/ingredients', ingredientData);
-      // return response.data;
-
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          const newIngredient: Ingredient = {
-            id: `ing${Date.now()}`,
-            name: ingredientData.name,
-            unit: ingredientData.unit,
-          };
-
-          mockIngredients.push(newIngredient);
-          resolve({ ingredient: newIngredient });
-        }, 500);
-      });
-    } catch (error) {
-      console.error("Failed to create ingredient:", error);
-      throw error;
-    }
-  },
-
-  // Update an existing ingredient
-  updateIngredient: async (
-    ingredientId: string,
-    updateData: UpdateIngredientDto
-  ): Promise<IngredientResponse> => {
-    try {
-      // In a real app:
-      // const response = await api.put(`/ingredients/${ingredientId}`, updateData);
-      // return response.data;
-
-      return await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const index = mockIngredients.findIndex(
-            (ing) => ing.id === ingredientId
-          );
-
-          if (index === -1) {
-            reject(new Error("Ingredient not found"));
-            return;
-          }
-
-          const updatedIngredient = {
-            ...mockIngredients[index],
-            ...updateData,
-          };
-
-          mockIngredients[index] = updatedIngredient;
-          resolve({ ingredient: updatedIngredient });
-        }, 500);
-      });
-    } catch (error) {
-      console.error(`Failed to update ingredient ${ingredientId}:`, error);
-      throw error;
-    }
-  },
-
-  // Delete an ingredient
-  deleteIngredient: async (ingredientId: string): Promise<void> => {
-    try {
-      // In a real app:
-      // await api.delete(`/ingredients/${ingredientId}`);
-      // return;
-
-      return await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const index = mockIngredients.findIndex(
-            (ing) => ing.id === ingredientId
-          );
-
-          if (index === -1) {
-            reject(new Error("Ingredient not found"));
-            return;
-          }
-
-          mockIngredients.splice(index, 1);
-
-          // Also remove related stocks
-          const stocksToRemove = mockStocks.filter(
-            (stock) => stock.ingredientId === ingredientId
-          );
-
-          stocksToRemove.forEach((stockToRemove) => {
-            const stockIndex = mockStocks.findIndex(
-              (s) => s.id === stockToRemove.id
-            );
-            if (stockIndex !== -1) {
-              mockStocks.splice(stockIndex, 1);
-            }
-          });
-
-          resolve();
-        }, 500);
-      });
-    } catch (error) {
-      console.error(`Failed to delete ingredient ${ingredientId}:`, error);
-      throw error;
-    }
-  },
-
-  // Create initial stock for an ingredient
+  // Create a new stock entry for a branch
   createStock: async (
     branchId: string,
-    ingredientId: string
+    ingredientId: string,
+    initialQuantity = 0
   ): Promise<StockResponse> => {
+    console.log(
+      `Creating stock for ingredient ${ingredientId} in branch ${branchId}`
+    );
     try {
-      // In a real app:
-      // const response = await api.post(`/branches/${branchId}/stocks`, { ingredientId });
-      // return response.data;
-
-      return await new Promise((resolve) => {
-        setTimeout(() => {
-          const newStock: Stock = {
-            id: `stock${Date.now()}`,
-            branchId,
-            ingredientId,
-            quantity: 0,
-            lowThreshold: 5,
-          };
-
-          mockStocks.push(newStock);
-          resolve({ stock: newStock });
-        }, 500);
+      const response = await api.post(`/branches/${branchId}/stocks`, {
+        ingredientId,
+        quantity: initialQuantity,
       });
+      console.log("Created stock:", response.data);
+      return response.data;
     } catch (error) {
       console.error("Failed to create stock:", error);
       throw error;
     }
   },
-
-  // Adjust stock quantity
-  adjustStock: async (
-    branchId: string,
+  updateStock: async (
     stockId: string,
-    adjustmentData: AdjustStockDto
+    data: { quantity: number }
   ): Promise<StockResponse> => {
     try {
-      // In a real app:
-      // const response = await api.put(`/branches/${branchId}/stocks/${stockId}/adjust`, adjustmentData);
-      // return response.data;
-
-      return await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const index = mockStocks.findIndex((s) => s.id === stockId);
-
-          if (index === -1) {
-            reject(new Error("Stock not found"));
-            return;
-          }
-
-          let newQuantity = mockStocks[index].quantity;
-
-          if (adjustmentData.type === "add") {
-            newQuantity += adjustmentData.quantity;
-          } else {
-            newQuantity = Math.max(0, newQuantity - adjustmentData.quantity);
-          }
-
-          const updatedStock = {
-            ...mockStocks[index],
-            quantity: newQuantity,
-          };
-
-          mockStocks[index] = updatedStock;
-          resolve({ stock: updatedStock });
-        }, 500);
-      });
+      const response = await api.patch(`/stocks/${stockId}`, data);
+      return response.data;
     } catch (error) {
-      console.error(`Failed to adjust stock ${stockId}:`, error);
+      console.error("Failed to update stock:", error);
       throw error;
     }
   },
 
-  // Update stock threshold
+  // Update stock threshold for low stock alerts
   updateThreshold: async (
     branchId: string,
     stockId: string,
-    thresholdData: UpdateThresholdDto
+    threshold: number
   ): Promise<StockResponse> => {
+    console.log(
+      `Updating threshold for stock ${stockId} in branch ${branchId} to ${threshold}`
+    );
     try {
-      // In a real app:
-      // const response = await api.put(`/branches/${branchId}/stocks/${stockId}/threshold`, thresholdData);
-      // return response.data;
-
-      return await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const index = mockStocks.findIndex((s) => s.id === stockId);
-
-          if (index === -1) {
-            reject(new Error("Stock not found"));
-            return;
-          }
-
-          const updatedStock = {
-            ...mockStocks[index],
-            lowThreshold: thresholdData.lowThreshold,
-          };
-
-          mockStocks[index] = updatedStock;
-          resolve({ stock: updatedStock });
-        }, 500);
-      });
+      const response = await api.patch(
+        `/branches/${branchId}/stocks/${stockId}/threshold`,
+        { threshold }
+      );
+      console.log("Updated threshold:", response.data);
+      return response.data;
     } catch (error) {
       console.error(`Failed to update threshold for stock ${stockId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a stock entry
+  deleteStock: async (branchId: string, stockId: string): Promise<void> => {
+    console.log(`Deleting stock ${stockId} from branch ${branchId}`);
+    try {
+      await api.delete(`/branches/${branchId}/stocks/${stockId}`);
+      console.log("Stock deleted successfully");
+    } catch (error) {
+      console.error(`Failed to delete stock ${stockId}:`, error);
+      throw error;
+    }
+  },
+
+  // Get low stock items for a branch
+  getLowStockItems: async (branchId: string): Promise<StockResponse> => {
+    console.log(`Fetching low stock items for branch ${branchId}`);
+    try {
+      const response = await api.get(`/branches/${branchId}/stocks/low-stock`);
+      console.log("Fetched low stock items:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch low stock items:", error);
+      throw error;
+    }
+  },
+
+  // Bulk update stocks (useful for inventory reconciliation)
+  bulkUpdateStocks: async (
+    branchId: string,
+    updates: Array<{ stockId: string; quantity: number }>
+  ): Promise<StockResponse> => {
+    console.log(`Bulk updating stocks for branch ${branchId}:`, updates);
+    try {
+      const response = await api.patch(
+        `/branches/${branchId}/stocks/bulk-update`,
+        {
+          updates,
+        }
+      );
+      console.log("Bulk updated stocks:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to bulk update stocks:", error);
       throw error;
     }
   },
