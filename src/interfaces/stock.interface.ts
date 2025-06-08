@@ -1,25 +1,14 @@
+import type { Ingredient } from "./ingredient.interface";
+import type { Branch } from "./branch.interface"; // ถ้ามี
+
 export interface Stock {
   _id: string;
-  ingredientId: string | any;
+  branchId: Branch | string;
+  ingredientId: Ingredient;
   quantity: number;
   lowThreshold: number;
-  threshold?: number;
-  branchId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface Ingredient {
-  id: string;
-  name: string;
-  unit: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface CreateIngredientDto {
-  name: string;
-  unit: string;
+  updatedAt: string;
+  __v: number;
 }
 
 export interface AdjustStockDto {
@@ -38,12 +27,6 @@ export interface StockAdjustment {
 }
 
 export interface StockResponse {
-  success: boolean;
-  stock: Stock;
-  message?: string;
-}
-
-export interface StocksResponse {
   success: boolean;
   stocks: Stock[];
   data?: Stock[];

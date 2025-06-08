@@ -1,11 +1,7 @@
 // services/stock.service.ts
 
 import axios from "axios";
-import type {
-  StocksResponse,
-  StockResponse,
-  AdjustStockDto,
-} from "@/interfaces/stock.interface";
+import type { StockResponse } from "@/interfaces/stock.interface";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -16,7 +12,7 @@ const api = axios.create({
 
 export const stockService = {
   // Get all stocks for a specific branch
-  getStocks: async (branchId: string): Promise<StocksResponse> => {
+  getStocks: async (branchId: string): Promise<StockResponse> => {
     console.log(`Fetching stocks for branch ${branchId}`);
     try {
       const response = await api.get(`/stocks/`);
@@ -65,32 +61,19 @@ export const stockService = {
       throw error;
     }
   },
-
-  // Adjust stock quantity (add or remove)
-  adjustStock: async (
-    branchId: string,
+  updateStock: async (
     stockId: string,
-    adjustmentData: AdjustStockDto
+    data: { quantity: number }
   ): Promise<StockResponse> => {
-    console.log("Adjusting stock with:", {
-      url: `/stocks/${stockId}/adjust`,
-      method: "PATCH",
-      body: adjustmentData, // ✅ Only quantity & type here
-    });
-
     try {
-      const response = await api.patch(
-        `/stocks/${stockId}/adjust`,
-        adjustmentData // ✅ No stockId in the body
-      );
-
-      console.log("Stock adjustment response:", response.data);
+      const response = await api.patch(`/stocks/${stockId}`, data);
       return response.data;
     } catch (error) {
-      console.error(`Error adjusting stock ${stockId}:`, error);
+      console.error("Failed to update stock:", error);
       throw error;
     }
   },
+
   // Update stock threshold for low stock alerts
   updateThreshold: async (
     branchId: string,
@@ -126,7 +109,7 @@ export const stockService = {
   },
 
   // Get low stock items for a branch
-  getLowStockItems: async (branchId: string): Promise<StocksResponse> => {
+  getLowStockItems: async (branchId: string): Promise<StockResponse> => {
     console.log(`Fetching low stock items for branch ${branchId}`);
     try {
       const response = await api.get(`/branches/${branchId}/stocks/low-stock`);
@@ -142,7 +125,7 @@ export const stockService = {
   bulkUpdateStocks: async (
     branchId: string,
     updates: Array<{ stockId: string; quantity: number }>
-  ): Promise<StocksResponse> => {
+  ): Promise<StockResponse> => {
     console.log(`Bulk updating stocks for branch ${branchId}:`, updates);
     try {
       const response = await api.patch(
