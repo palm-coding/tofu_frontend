@@ -45,7 +45,7 @@ const mockQueue: QueueItem[] = [
 
 export const queueService = {
   getQueue: async (branchId: string): Promise<QueueListResponse> => {
-    console.log("Fetching queue for branch:", branchId);
+    // console.log("Fetching queue for branch:", branchId);
     try {
       return await new Promise((resolve) => {
         setTimeout(() => {
@@ -56,20 +56,20 @@ export const queueService = {
 
           // ถ้าไม่พบข้อมูล ให้ใช้ข้อมูลทั้งหมด (สำหรับทดสอบ)
           if (queueForBranch.length === 0) {
-            console.log(
-              "No queue found for branchId:",
-              branchId,
-              "- using all queue items for testing"
-            );
+            // console.log(
+            //   "No queue found for branchId:",
+            //   branchId,
+            //   "- using all queue items for testing"
+            // );
             queueForBranch = mockQueue;
           }
 
-          console.log(
-            "Queue filtered for branch:",
-            branchId,
-            "- count:",
-            queueForBranch.length
-          );
+          // console.log(
+          //   "Queue filtered for branch:",
+          //   branchId,
+          //   "- count:",
+          //   queueForBranch.length
+          // );
           resolve({ queue: queueForBranch });
         }, 500);
       });

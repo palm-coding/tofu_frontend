@@ -31,7 +31,7 @@ class WebSocketService {
   private eventHandlers: Record<string, EventHandler[]> = {};
 
   constructor() {
-    this.apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    this.apiUrl = process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001";
   }
 
   /**
@@ -47,7 +47,7 @@ class WebSocketService {
       return this.socket;
     }
 
-    this.socket = io(`${this.apiUrl}/orders`, {
+    this.socket = io(`${this.apiUrl}`, {
       reconnectionAttempts: this.maxConnectionAttempts,
       reconnectionDelay: this.reconnectDelay,
       autoConnect: true,

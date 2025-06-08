@@ -169,7 +169,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     }
   };
 
-  // เช็คเอาท์โต๊ะ - แก้ไขเพื่อใช้ sessionService
+  // เช็คเอาท์โต๊ะ - แก้ไขเพื่อใช้ sessionService และตรวจสอบสถานะออร์เดอร์
   const handleCheckout = async (tableId: string) => {
     try {
       setError(null);
@@ -185,42 +185,62 @@ export function TableDisplay({ branchId }: TableManagementProps) {
           tableId
         );
         if (sessionResponse) {
+          // 1.1 ตรวจสอบออร์เดอร์ที่ยังไม่ได้เสิร์ฟในเซสชัน
+          const orders = await orderService.getOrdersForSession(
+            sessionResponse._id
+          );
+          const nonServedOrders = orders.filter(
+            (order) => order.status !== "served"
+          );
+
+          // 1.2 อัพเดทสถานะออร์เดอร์ทั้งหมดที่ยังไม่ได้เสิร์ฟเป็น "served"
+          if (nonServedOrders.length > 0) {
+            console.log(
+              `Found ${nonServedOrders.length} non-served orders, updating status...`
+            );
+
+            // อัพเดทสถานะทีละออร์เดอร์
+            for (const order of nonServedOrders) {
+              await orderService.updateOrderStatus(order._id, "served");
+              console.log(`Updated order ${order._id} status to "served"`);
+            }
+          }
+
           // 2. เช็คเอาท์ session
           await sessionService.checkoutSession(sessionResponse._id);
         }
+
+        // 3. อัพเดตสถานะโต๊ะเป็น available
+        await tableService.updateTable(tableId, { status: "available" });
+
+        // 4. อัพเดต tables state
+        setTables(
+          tables.map((table) =>
+            table._id === tableId
+              ? {
+                  ...table,
+                  status: "available",
+                  checkinTime: undefined,
+                  customerName: undefined,
+                  sessionId: undefined,
+                  orders: undefined,
+                }
+              : table
+          )
+        );
+
+        // 5. รีเซ็ตข้อมูลที่เลือกอยู่
+        if (selectedTable?._id === tableId) {
+          setSelectedTable(null);
+          setSelectedSession(null);
+        }
+
+        setDetailsDialogOpen(false);
       } catch (sessionError) {
         console.warn("No active session found:", sessionError);
       }
-
-      // 3. อัพเดตสถานะโต๊ะเป็น available
-      await tableService.updateTable(tableId, { status: "available" });
-
-      // 4. อัพเดต tables state
-      setTables(
-        tables.map((table) =>
-          table._id === tableId
-            ? {
-                ...table,
-                status: "available",
-                checkinTime: undefined,
-                customerName: undefined,
-                sessionId: undefined,
-                orders: undefined,
-              }
-            : table
-        )
-      );
-
-      // 5. รีเซ็ตข้อมูลที่เลือกอยู่
-      if (selectedTable?._id === tableId) {
-        setSelectedTable(null);
-        setSelectedSession(null);
-      }
-
-      setDetailsDialogOpen(false);
-      setIsPaid(false);
     } catch (err) {
-      console.error("Error checking out table:", err);
+      console.error("Failed to checkout table:", err);
       setError("ไม่สามารถเช็คเอาท์โต๊ะได้ กรุณาลองอีกครั้ง");
     }
   };
