@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,8 @@ import { paymentService } from "@/services/payment/payment.service";
 import { Payment } from "@/interfaces/payment.interface";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getExpirationTime } from "../utils/table-helper";
+import { useOrdersSocket } from "@/hooks/useOrdersSocket";
+import { toast } from "sonner";
 
 interface TableDetailDialogProps {
   open: boolean;
@@ -46,6 +48,7 @@ interface TableDetailDialogProps {
   onMarkAsPaid: () => void;
   onCheckout: (tableId: string) => void;
   onShowQR: (table: TableDisplay) => void;
+  onIsPaidChange: (isPaid: boolean) => void;
   getTimeAgo: (dateString: string) => string;
   getStatusText: (status: string) => string;
   getStatusColor: (status: string) => string;
@@ -62,6 +65,7 @@ export function TableDetailDialog({
   onMarkAsPaid,
   onCheckout,
   onShowQR,
+  onIsPaidChange,
   getTimeAgo,
   getStatusText,
   getStatusColor,
@@ -80,6 +84,64 @@ export function TableDetailDialog({
   const [currentPayment, setCurrentPayment] = useState<Payment | null>(null);
   const [paymentLoading, setPaymentLoading] = useState<boolean>(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  const handlePaymentStatusChanged = useCallback(
+    (payment: Payment) => {
+      console.log("Payment status update received:", payment);
+
+      // ตรวจสอบว่าเป็น payment ของ session นี้หรือไม่
+      if (payment.sessionId === session?._id) {
+        // อัพเดทสถานะ payment ในหน้าจอ
+        setCurrentPayment(payment);
+
+        // จัดการตามสถานะของ payment
+        switch (payment.status) {
+          case "paid":
+            toast.success("การชำระเงินสำเร็จ!");
+            onIsPaidChange(true); // Use the callback instead of setIsPaid
+            setShowPaymentQR(false);
+            break;
+
+          // other cases remain unchanged
+          case "pending":
+            setShowPaymentQR(true);
+            setQrKey((prev) => prev + 1);
+            break;
+
+          case "failed":
+            toast.error("การชำระเงินล้มเหลว");
+            setPaymentError("การชำระเงินล้มเหลว กรุณาลองใหม่อีกครั้ง");
+            break;
+
+          case "expired":
+            toast.warning("QR Code หมดอายุ");
+            setPaymentError("QR Code หมดอายุแล้ว กรุณาสร้าง QR ใหม่");
+            break;
+        }
+      }
+    },
+    [session?._id, onIsPaidChange] 
+  );
+
+  const { isConnected } = useOrdersSocket({
+    branchId: selectedTable?.branchId,
+    orderId: currentPayment?.orderId, // ถ้ามี payment ให้ติดตาม order room ที่เกี่ยวข้อง
+    onPaymentStatusChanged: handlePaymentStatusChanged,
+    onError: (error) => console.error("WebSocket error:", error),
+  });
+
+  // แสดงสถานะการเชื่อมต่อ WebSocket (optional)
+  const renderConnectionStatus = () => {
+    return (
+      <div className="text-xs text-muted-foreground mt-2">
+        {isConnected ? (
+          <span className="text-green-500">🟢 แจ้งเตือนสดพร้อมใช้งาน</span>
+        ) : (
+          <span className="text-amber-500">🟠 ไม่ได้เชื่อมต่อแบบเรียลไทม์</span>
+        )}
+      </div>
+    );
+  };
 
   // Reset all state when the dialog opens or table/session changes
   useEffect(() => {
@@ -384,7 +446,8 @@ export function TableDetailDialog({
       <DialogContent className="w-full min-w-[200px] max-w-[95vw] lg:max-w-[80vw] max-h-[90vh] mx-auto bg-background border-0 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-light text-foreground">
-            รายละเอียด {selectedTable?.name || "โต๊ะ"}
+            รายละเอียด {selectedTable?.name || "โต๊ะ"}{" "}
+            {renderConnectionStatus()}
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
             เช็คอินเมื่อ: {selectedTable?.checkinTime || "ไม่ระบุ"} | ลูกค้า:{" "}

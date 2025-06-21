@@ -570,6 +570,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
             session={selectedSession}
             isPaid={isPaid}
             onMarkAsPaid={handleMarkAsPaid}
+            onIsPaidChange={setIsPaid}
             onCheckout={handleCheckout}
             onShowQR={handleShowQR}
             getTimeAgo={getTimeAgo}

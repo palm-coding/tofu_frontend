@@ -1,22 +1,28 @@
 import { useState, useEffect, useCallback } from "react";
 import { webSocketService } from "@/services/websocket.service";
 import { Order } from "@/interfaces/order.interface";
+import { Payment } from "@/interfaces/payment.interface";
 
 interface UseOrdersSocketOptions {
   branchId?: string;
+  orderId?: string;
   onNewOrder?: (order: Order) => void;
   onOrderStatusChanged?: (order: Order) => void;
+  onPaymentStatusChanged?: (payment: Payment) => void;
   onError?: (error: Error) => void;
 }
 
 export function useOrdersSocket({
   branchId,
+  orderId,
   onNewOrder,
   onOrderStatusChanged,
+  onPaymentStatusChanged,
   onError,
 }: UseOrdersSocketOptions) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isBranchJoined, setIsBranchJoined] = useState<boolean>(false);
+  const [isOrderRoomJoined, setIsOrderRoomJoined] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   // รับข้อมูล order ใหม่
@@ -41,6 +47,18 @@ export function useOrdersSocket({
       }
     },
     [onOrderStatusChanged]
+  );
+
+  // เพิ่ม handler สำหรับการเปลี่ยนสถานะการชำระเงิน
+  const handlePaymentStatusChanged = useCallback(
+    (eventData: unknown) => {
+      const payment = eventData as Payment;
+      console.log("Payment status changed via WebSocket:", payment);
+      if (onPaymentStatusChanged) {
+        onPaymentStatusChanged(payment);
+      }
+    },
+    [onPaymentStatusChanged]
   );
 
   // เชื่อมต่อกับ WebSocket และตั้งค่า event listeners
@@ -73,6 +91,11 @@ export function useOrdersSocket({
         handleOrderStatusChanged
       );
 
+      const paymentStatusChangedUnsubscribe = webSocketService.on(
+        "paymentStatusChanged",
+        handlePaymentStatusChanged
+      );
+
       // ตรวจสอบสถานะการเชื่อมต่อปัจจุบัน
       setIsConnected(socket.connected);
 
@@ -83,6 +106,7 @@ export function useOrdersSocket({
         socket.off("connect_error", onConnectError);
         newOrderUnsubscribe();
         orderStatusChangedUnsubscribe();
+        paymentStatusChangedUnsubscribe();
       };
     } catch (err) {
       console.error("Failed to initialize WebSocket:", err);
@@ -90,7 +114,12 @@ export function useOrdersSocket({
       if (onError && err instanceof Error) onError(err);
       return () => {};
     }
-  }, [handleNewOrder, handleOrderStatusChanged, onError]);
+  }, [
+    handleNewOrder,
+    handleOrderStatusChanged,
+    handlePaymentStatusChanged,
+    onError,
+  ]);
 
   // เข้าร่วม/ออกจาก branch room เมื่อ branchId เปลี่ยนแปลง
   useEffect(() => {
@@ -126,12 +155,44 @@ export function useOrdersSocket({
     };
   }, [branchId, isConnected, onError]);
 
+  // เพิ่ม useEffect สำหรับการเข้าร่วม/ออกจาก order room
+  useEffect(() => {
+    if (!isConnected || !orderId) {
+      setIsOrderRoomJoined(false);
+      return () => {};
+    }
+
+    let isMounted = true;
+
+    // Join order room
+    webSocketService
+      .joinOrderRoom(orderId)
+      .then(() => {
+        if (isMounted) setIsOrderRoomJoined(true);
+      })
+      .catch((err) => {
+        console.error("Failed to join order room:", err);
+        if (isMounted && onError && err instanceof Error) onError(err);
+      });
+
+    // Cleanup
+    return () => {
+      isMounted = false;
+      if (orderId && isConnected) {
+        webSocketService.leaveOrderRoom(orderId).catch((err) => {
+          console.error("Failed to leave order room:", err);
+        });
+      }
+    };
+  }, [orderId, isConnected, onError]);
+
   // ฟังก์ชันสำหรับตัดการเชื่อมต่อ WebSocket (สำหรับให้ component เรียกใช้ถ้าต้องการ)
   const disconnect = useCallback(() => {
     webSocketService.disconnect();
     setIsConnected(false);
     setIsBranchJoined(false);
+    setIsOrderRoomJoined(false);
   }, []);
 
-  return { isConnected, isBranchJoined, error, disconnect };
+  return { isConnected, isBranchJoined, isOrderRoomJoined, error, disconnect };
 }

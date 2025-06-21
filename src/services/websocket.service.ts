@@ -3,21 +3,24 @@ import {
   SocketResponse,
   NewOrderEvent,
   OrderStatusChangedEvent,
+  PaymentStatusChangedEvent,
 } from "@/interfaces/websocket.interface";
 import { Order } from "@/interfaces/order.interface";
+import { Payment } from "@/interfaces/payment.interface";
 
 // กำหนดประเภทข้อมูลที่อาจได้รับจาก event ต่างๆ
 type EventData =
   | NewOrderEvent
   | OrderStatusChangedEvent
+  | PaymentStatusChangedEvent
   | Order
+  | Payment
   | Error
   | string
   | number
   | boolean
   | null
   | undefined;
-  
 
 // แก้ไขจาก any เป็น unknown หรือ union type ที่เฉพาะเจาะจง
 type EventHandler = (...args: EventData[]) => void;
@@ -118,6 +121,57 @@ class WebSocketService {
             resolve(response);
           } else {
             console.error("Failed to leave branch room:", response);
+            reject(response);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * เข้าร่วมห้องสนทนาของออร์เดอร์
+   */
+  joinOrderRoom(orderId: string): Promise<SocketResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        this.connect();
+      }
+
+      this.socket?.emit(
+        "joinOrderRoom",
+        orderId,
+        (response: SocketResponse) => {
+          if (response.success) {
+            console.log("Joined order room:", orderId);
+            resolve(response);
+          } else {
+            console.error("Failed to join order room:", response);
+            reject(response);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * ออกจากห้องสนทนาของออร์เดอร์
+   */
+  leaveOrderRoom(orderId: string): Promise<SocketResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        resolve({ success: false, message: "Not connected" });
+        return;
+      }
+
+      this.socket.emit(
+        "leaveOrderRoom",
+        orderId,
+        (response: SocketResponse) => {
+          if (response.success) {
+            console.log("Left order room:", orderId);
+            resolve(response);
+          } else {
+            console.error("Failed to leave order room:", response);
             reject(response);
           }
         }
