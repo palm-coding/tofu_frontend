@@ -4,6 +4,7 @@ import {
   NewOrderEvent,
   OrderStatusChangedEvent,
   PaymentStatusChangedEvent,
+  SessionCheckoutEvent,
 } from "@/interfaces/websocket.interface";
 import { Order } from "@/interfaces/order.interface";
 import { Payment } from "@/interfaces/payment.interface";
@@ -13,6 +14,7 @@ type EventData =
   | NewOrderEvent
   | OrderStatusChangedEvent
   | PaymentStatusChangedEvent
+  | SessionCheckoutEvent
   | Order
   | Payment
   | Error
@@ -172,6 +174,86 @@ class WebSocketService {
             resolve(response);
           } else {
             console.error("Failed to leave order room:", response);
+            reject(response);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * เข้าร่วมห้องสนทนาของเซสชัน
+   */
+  joinSessionRoom(sessionId: string): Promise<SocketResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        this.connect();
+      }
+
+      this.socket?.emit(
+        "joinSessionRoom",
+        sessionId,
+        (response: SocketResponse) => {
+          if (response.success) {
+            console.log("Joined session room:", sessionId);
+            resolve(response);
+          } else {
+            console.error("Failed to join session room:", response);
+            reject(response);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * ออกจากห้องสนทนาของเซสชัน
+   */
+  leaveSessionRoom(sessionId: string): Promise<SocketResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        resolve({ success: false, message: "Not connected" });
+        return;
+      }
+
+      this.socket.emit(
+        "leaveSessionRoom",
+        sessionId,
+        (response: SocketResponse) => {
+          if (response.success) {
+            console.log("Left session room:", sessionId);
+            resolve(response);
+          } else {
+            console.error("Failed to leave session room:", response);
+            reject(response);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * แจ้งเตือนการเช็คเอาท์เซสชัน
+   */
+  notifySessionCheckout(sessionId: string): Promise<SocketResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        resolve({ success: false, message: "Not connected" });
+        return;
+      }
+
+      this.socket.emit(
+        "notifySessionCheckout",
+        sessionId,
+        (response: SocketResponse) => {
+          if (response.success) {
+            console.log("Session checkout notification sent:", sessionId);
+            resolve(response);
+          } else {
+            console.error(
+              "Failed to send session checkout notification:",
+              response
+            );
             reject(response);
           }
         }

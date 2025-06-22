@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +29,9 @@ import { orderService } from "@/services/order/order.service";
 import { sessionService } from "@/services/session/session.service";
 import { menuService } from "@/services/menu.service";
 
+// import websocket
+import { useOrdersSocket } from "@/hooks/useOrdersSocket";
+
 // เพิ่มการนำเข้า interfaces ที่จำเป็น
 import { Order, OrderStatus } from "@/interfaces/order.interface";
 import { MenuItem, MenuCategory } from "@/interfaces/menu.interface";
@@ -40,6 +43,7 @@ import { OrderHeader } from "./order-header";
 import { OrderContent } from "./order-content";
 import { OrderMenuDialog } from "./dialogs/order-menu-dialog";
 import { OrderCartDialog } from "./dialogs/order-cart-dialog";
+import { SessionCheckoutEvent } from "@/interfaces/websocket.interface";
 
 const getCategoryWithIcon = (
   categories: MenuCategory[]
@@ -100,6 +104,89 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
   const tabsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const categoryTabsRef = useRef<HTMLDivElement>(null);
+
+  // เพิ่ม handler สำหรับ session checkout
+  const handleSessionCheckout = useCallback(
+    (checkoutEvent: SessionCheckoutEvent) => {
+      console.log(
+        "Session checkout received:",
+        JSON.stringify(checkoutEvent, null, 2)
+      );
+
+      // ตรวจสอบว่าเป็น session ที่กำลังใช้งานอยู่หรือไม่
+      if (checkoutEvent._id === sessionId) {
+        toast.info("เซสชันสิ้นสุดลงแล้ว", {
+          description: "โต๊ะนี้ได้ถูกเช็คเอาท์แล้ว กรุณาชำระเงินที่เคาน์เตอร์",
+          duration: 0, // ไม่หายไปโดยอัตโนมัติ
+        });
+
+        // อัพเดต UI เพื่อแสดงว่าเซสชันถูก checkout แล้ว
+        setSession((prevSession) =>
+          prevSession
+            ? { ...prevSession, checkoutAt: checkoutEvent.checkoutAt }
+            : null
+        );
+
+        // ตรวจสอบและอัปเดตประวัติออร์เดอร์จาก orderIds ที่อยู่ใน session checkout
+        if (
+          Array.isArray(checkoutEvent.orderIds) &&
+          checkoutEvent.orderIds.length > 0
+        ) {
+          // กรณีที่ orderIds เป็น array ของ object orders
+          if (
+            typeof checkoutEvent.orderIds[0] === "object" &&
+            checkoutEvent.orderIds[0] &&
+            "_id" in checkoutEvent.orderIds[0]
+          ) {
+            // ใช้ as unknown ก่อนแล้วค่อย as Order[] เพื่อหลีกเลี่ยงข้อผิดพลาด TypeScript
+            setOrderHistory(checkoutEvent.orderIds as unknown as Order[]);
+            console.log("Updated order history from session checkout event");
+          }
+          // กรณีที่ orderIds เป็น array ของ string ids แต่ไม่มีข้อมูลใน orderHistory
+          else if (orderHistory.length === 0) {
+            // ถ้าไม่มีประวัติออร์เดอร์ ให้ดึงข้อมูลออร์เดอร์จาก API
+            const fetchOrders = async () => {
+              try {
+                const historyResponse = await orderService.getOrdersForSession(
+                  checkoutEvent._id
+                );
+                if (
+                  Array.isArray(historyResponse) &&
+                  historyResponse.length > 0
+                ) {
+                  setOrderHistory(historyResponse);
+                  console.log("Fetched order history after session checkout");
+                }
+              } catch (error) {
+                console.error(
+                  "Failed to fetch orders after session checkout:",
+                  error
+                );
+              }
+            };
+            fetchOrders();
+          }
+        }
+      }
+    },
+    [sessionId, orderHistory]
+  );
+
+  // เพิ่มการใช้งาน websocket hook
+  const { isConnected } = useOrdersSocket({
+    sessionId,
+    onSessionCheckout: handleSessionCheckout,
+    onError: (error) => {
+      console.error("WebSocket error:", error);
+    },
+  });
+
+  useEffect(() => {
+    console.log(
+      "WebSocket connection status:",
+      isConnected ? "Connected" : "Disconnected"
+    );
+  }, [isConnected]);
 
   // Initial data loading
   useEffect(() => {
@@ -756,6 +843,132 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
     }
   };
 
+  // เช็คว่า session ถูก checkout แล้วหรือไม่
+  const isCheckedOut = session?.checkoutAt;
+
+  // แสดงแบนเนอร์แจ้งเตือนเมื่อ session ถูก checkout แล้ว
+  if (isCheckedOut) {
+    return (
+      <div className="container px-4 mx-auto min-h-screen bg-background pt-8">
+        <div className="p-6 bg-muted border border-border rounded-lg text-center">
+          <h2 className="text-2xl font-medium mb-2">เซสชันสิ้นสุดแล้ว</h2>
+          <p className="text-muted-foreground mb-6">
+            โต๊ะนี้ได้ถูกเช็คเอาท์แล้ว กรุณาชำระเงินที่เคาน์เตอร์
+          </p>
+          <div className="bg-background p-4 rounded-md">
+            <h3 className="font-medium text-xl mb-4">ประวัติออร์เดอร์</h3>
+            {orderHistory.length > 0 ? (
+              <div className="space-y-6">
+                {orderHistory.map((order) => (
+                  <div
+                    key={order._id}
+                    className="bg-card p-4 rounded-lg border border-border shadow-sm"
+                  >
+                    <div className="flex justify-between items-center border-b border-border pb-3 mb-3">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-left text-lg">
+                          ออร์เดอร์โดย: {order.orderBy}
+                        </span>
+                        <span className="text-muted-foreground text-sm">
+                          เวลา:{" "}
+                          {new Date(order.createdAt).toLocaleTimeString(
+                            "th-TH",
+                            { hour: "2-digit", minute: "2-digit" }
+                          )}
+                        </span>
+                      </div>
+                      <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                        {order.status === "served"
+                          ? "เสิร์ฟแล้ว"
+                          : order.status}
+                      </div>
+                    </div>
+
+                    <div className="text-left mb-3">
+                      <h4 className="font-medium mb-2">รายการอาหาร:</h4>
+                      <ul className="space-y-2 pl-2">
+                        {order.orderLines.map((line, idx) => (
+                          <li key={idx} className="flex justify-between">
+                            <div className="flex items-start">
+                              <span className="bg-secondary text-secondary-foreground w-6 h-6 flex items-center justify-center rounded-full mr-2">
+                                {idx + 1}
+                              </span>
+                              <div>
+                                <div className="font-medium">
+                                  {typeof line.menuItemId === "object" &&
+                                  line.menuItemId?.name
+                                    ? line.menuItemId.name
+                                    : `รายการที่ ${idx + 1}`}
+                                </div>
+                                {line.note && (
+                                  <div className="text-sm text-muted-foreground">
+                                    หมายเหตุ: {line.note}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-medium">
+                                {line.qty || line.quantity || 1} ×
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div className="border-t border-border pt-3 flex justify-between items-center">
+                      <div className="text-sm text-muted-foreground">
+                        {order.orderLines.length} รายการ
+                      </div>
+                      <div className="text-lg font-semibold">
+                        ยอดรวม: ฿{order.totalAmount.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                  <div className="text-right">
+                    <div className="text-muted-foreground mb-1">
+                      ยอดรวมทั้งหมด
+                    </div>
+                    <div className="text-2xl font-bold text-primary">
+                      ฿
+                      {orderHistory
+                        .reduce((sum, order) => sum + order.totalAmount, 0)
+                        .toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 flex flex-col items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-muted-foreground mb-2"
+                >
+                  <path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"></path>
+                  <path d="M8 6h8"></path>
+                  <path d="M8 10h8"></path>
+                  <path d="M8 14h4"></path>
+                </svg>
+                <p className="text-muted-foreground">ไม่พบประวัติออร์เดอร์</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
   // Loading state
   if (loading) {
     return (

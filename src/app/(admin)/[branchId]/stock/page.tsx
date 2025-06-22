@@ -12,8 +12,8 @@ export default function StockPage() {
 
   return (
     <StockDisplay
-      branchCode={branchCode}
-      branchId={branch?._id}
+      branchCode={branchCode || ""}
+      branchId={branch?._id || ""}
       branch={branch}
     />
   );

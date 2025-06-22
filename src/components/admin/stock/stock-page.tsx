@@ -9,8 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StockTable } from "./stock-table";
 import { StockCharts } from "./stock-chart";
 import { toast } from "sonner";
+import { Branch } from "@/interfaces/branch.interface";
 
-export function StockDisplay({ branchId }: { branchId: string }) {
+interface StockDisplayProps {
+  branchCode: string;
+  branchId: string;
+  branch: Branch | null;
+}
+
+export function StockDisplay({
+  branchId,
+}: StockDisplayProps) {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -2,27 +2,33 @@ import { useState, useEffect, useCallback } from "react";
 import { webSocketService } from "@/services/websocket.service";
 import { Order } from "@/interfaces/order.interface";
 import { Payment } from "@/interfaces/payment.interface";
+import { SessionCheckoutEvent } from "@/interfaces/websocket.interface";
 
 interface UseOrdersSocketOptions {
   branchId?: string;
   orderId?: string;
+  sessionId?: string;
   onNewOrder?: (order: Order) => void;
   onOrderStatusChanged?: (order: Order) => void;
   onPaymentStatusChanged?: (payment: Payment) => void;
+  onSessionCheckout?: (session: SessionCheckoutEvent) => void;
   onError?: (error: Error) => void;
 }
 
 export function useOrdersSocket({
   branchId,
   orderId,
+  sessionId,
   onNewOrder,
   onOrderStatusChanged,
   onPaymentStatusChanged,
+  onSessionCheckout,
   onError,
 }: UseOrdersSocketOptions) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isBranchJoined, setIsBranchJoined] = useState<boolean>(false);
   const [isOrderRoomJoined, setIsOrderRoomJoined] = useState<boolean>(false);
+  const [isSessionJoined, setIsSessionJoined] = useState<boolean>(false);
   const [error, setError] = useState<Error | null>(null);
 
   // รับข้อมูล order ใหม่
@@ -61,6 +67,19 @@ export function useOrdersSocket({
     [onPaymentStatusChanged]
   );
 
+  // เพิ่ม handler สำหรับ session checkout
+  const handleSessionCheckout = useCallback(
+    (eventData: unknown) => {
+      // ส่ง data โดยตรงไม่ต้องห่อด้วย session property เพื่อให้ตรงกับการใช้งานจริง
+      console.log("Session checkout notification via WebSocket:", eventData);
+
+      if (onSessionCheckout) {
+        onSessionCheckout(eventData as SessionCheckoutEvent);
+      }
+    },
+    [onSessionCheckout]
+  );
+
   // เชื่อมต่อกับ WebSocket และตั้งค่า event listeners
   useEffect(() => {
     try {
@@ -96,6 +115,11 @@ export function useOrdersSocket({
         handlePaymentStatusChanged
       );
 
+      const sessionCheckoutUnsubscribe = webSocketService.on(
+        "sessionCheckout",
+        handleSessionCheckout
+      );
+
       // ตรวจสอบสถานะการเชื่อมต่อปัจจุบัน
       setIsConnected(socket.connected);
 
@@ -107,6 +131,7 @@ export function useOrdersSocket({
         newOrderUnsubscribe();
         orderStatusChangedUnsubscribe();
         paymentStatusChangedUnsubscribe();
+        sessionCheckoutUnsubscribe();
       };
     } catch (err) {
       console.error("Failed to initialize WebSocket:", err);
@@ -118,6 +143,7 @@ export function useOrdersSocket({
     handleNewOrder,
     handleOrderStatusChanged,
     handlePaymentStatusChanged,
+    handleSessionCheckout,
     onError,
   ]);
 
@@ -186,13 +212,45 @@ export function useOrdersSocket({
     };
   }, [orderId, isConnected, onError]);
 
+  // เพิ่ม useEffect สำหรับการเข้าร่วม/ออกจาก session room
+  useEffect(() => {
+    if (!isConnected || !sessionId) {
+      setIsSessionJoined(false);
+      return () => {};
+    }
+
+    let isMounted = true;
+
+    // Join session room
+    webSocketService
+      .joinSessionRoom(sessionId)
+      .then(() => {
+        if (isMounted) setIsSessionJoined(true);
+      })
+      .catch((err) => {
+        console.error("Failed to join session room:", err);
+        if (isMounted && onError && err instanceof Error) onError(err);
+      });
+
+    // Cleanup
+    return () => {
+      isMounted = false;
+      if (sessionId && isConnected) {
+        webSocketService.leaveSessionRoom(sessionId).catch((err) => {
+          console.error("Failed to leave session room:", err);
+        });
+      }
+    };
+  }, [sessionId, isConnected, onError]);
+
   // ฟังก์ชันสำหรับตัดการเชื่อมต่อ WebSocket (สำหรับให้ component เรียกใช้ถ้าต้องการ)
   const disconnect = useCallback(() => {
     webSocketService.disconnect();
     setIsConnected(false);
     setIsBranchJoined(false);
     setIsOrderRoomJoined(false);
+    setIsSessionJoined(false);
   }, []);
 
-  return { isConnected, isBranchJoined, isOrderRoomJoined, error, disconnect };
+  return { isConnected, isBranchJoined, isOrderRoomJoined, isSessionJoined, error, disconnect };
 }

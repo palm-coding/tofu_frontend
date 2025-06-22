@@ -35,7 +35,7 @@ export interface Table {
 export interface Order {
   _id: string;
   branchId: string;
-  sessionId: string;
+  sessionId: string | { _id: string; [key: string]: unknown };
   tableId: Table;
   // เพิ่มฟิลด์ใหม่เพื่อรองรับการสั่งอาหารแยกตามลูกค้า
   clientId: string;

@@ -120,12 +120,117 @@ export function TableDetailDialog({
         }
       }
     },
-    [session?._id, onIsPaidChange] 
+    [session?._id, onIsPaidChange]
+  );
+
+  // รับการแจ้งเตือนเมื่อมีออร์เดอร์ใหม่
+  const handleNewOrder = useCallback(
+    (order: Order) => {
+      console.log("New order received in TableDetailDialog:", order);
+
+      // ดึงค่า ID ที่ต้องการเปรียบเทียบจาก object หรือ string
+      const orderSessionId =
+        typeof order.sessionId === "object" && order.sessionId
+          ? order.sessionId._id
+          : order.sessionId;
+
+      const orderTableId =
+        typeof order.tableId === "object" && order.tableId
+          ? order.tableId._id
+          : order.tableId;
+
+      // ตรวจสอบว่าออร์เดอร์เป็นของโต๊ะและเซสชันที่กำลังดูอยู่หรือไม่
+      if (
+        orderSessionId === session?._id &&
+        orderTableId === selectedTable?._id
+      ) {
+        console.log("Order matches current session and table, updating state");
+
+        // เพิ่มออร์เดอร์ใหม่เข้าไปใน state
+        setOrders((prevOrders) => {
+          // ตรวจสอบว่าออร์เดอร์นี้มีอยู่แล้วหรือไม่
+          const orderExists = prevOrders.some((o) => o._id === order._id);
+          if (orderExists) {
+            console.log("Order already exists in state, not updating");
+            return prevOrders;
+          }
+
+          console.log("Adding new order to state");
+          // เพิ่มออร์เดอร์ใหม่และจัดเรียงตาม createdAt จากใหม่ไปเก่า
+          return [...prevOrders, order].sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        });
+
+        // แสดง toast notification
+        toast.success("มีออร์เดอร์ใหม่!", {
+          description: (
+            <div>
+              <div className="font-medium">
+                {typeof order.tableId === "object" && order.tableId
+                  ? order.tableId.name
+                  : "ไม่ระบุโต๊ะ"}
+              </div>
+              <div className="mt-1">
+                {order.orderLines.length} รายการ จากลูกค้า:{" "}
+                {order.orderBy || "ไม่ระบุ"}
+              </div>
+            </div>
+          ),
+          duration: 4000,
+        });
+      } else {
+        console.log("Order does not match current session/table, ignoring", {
+          orderSessionId,
+          sessionId: session?._id,
+          orderTableId,
+          tableId: selectedTable?._id,
+        });
+      }
+    },
+    [session?._id, selectedTable?._id]
+  );
+
+  // รับการแจ้งเตือนเมื่อมีการเปลี่ยนสถานะออร์เดอร์
+  const handleOrderStatusChanged = useCallback(
+    (updatedOrder: Order) => {
+      console.log("Order status changed in TableDetailDialog:", updatedOrder);
+
+      // ตรวจสอบว่าเป็นออร์เดอร์ของโต๊ะและเซสชันที่กำลังดูอยู่หรือไม่
+      if (
+        updatedOrder.sessionId === session?._id &&
+        updatedOrder.tableId._id === selectedTable?._id
+      ) {
+        // อัพเดทออร์เดอร์ใน state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) =>
+            order._id === updatedOrder._id ? updatedOrder : order
+          )
+        );
+
+        // ถ้าสถานะเปลี่ยนเป็น "paid" ให้อัพเดท isPaid
+        if (updatedOrder.status === "paid") {
+          onIsPaidChange(true);
+        }
+
+        // แสดง toast notification
+        toast.info(
+          `สถานะออร์เดอร์อัพเดท: ${getStatusText(updatedOrder.status)}`,
+          {
+            description: `ออร์เดอร์ #${updatedOrder._id.substring(0, 8)}`,
+          }
+        );
+      }
+    },
+    [session?._id, selectedTable?._id, onIsPaidChange, getStatusText]
   );
 
   const { isConnected } = useOrdersSocket({
     branchId: selectedTable?.branchId,
     orderId: currentPayment?.orderId, // ถ้ามี payment ให้ติดตาม order room ที่เกี่ยวข้อง
+    onNewOrder: handleNewOrder, // เพิ่มการจัดการออร์เดอร์ใหม่
+    onOrderStatusChanged: handleOrderStatusChanged, // เพิ่มการจัดการเปลี่ยนสถานะออร์เดอร์
     onPaymentStatusChanged: handlePaymentStatusChanged,
     onError: (error) => console.error("WebSocket error:", error),
   });
@@ -276,29 +381,19 @@ export function TableDetailDialog({
       return 0;
     }
 
-    // ถ้าไม่ได้กำหนดให้แสดงผลรวมของทั้งหมด ให้แสดงเป็นรายออร์เดอร์
-    // จัดเรียงจากใหม่ไปเก่า และเลือกเฉพาะออร์เดอร์ที่ยังไม่ได้ชำระเงิน
-    const sortedOrders = [...orders]
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-      .filter((order) => order.status !== "paid");
+    // กรองเฉพาะออร์เดอร์ที่ยังไม่ได้ชำระเงิน
+    const unpaidOrders = orders.filter((order) => order.status !== "paid");
 
-    // หากมีมากกว่า 1 ออร์เดอร์ ให้แสดงเฉพาะออร์เดอร์ล่าสุดที่ยังไม่ได้ชำระเงิน
-    if (sortedOrders.length > 0) {
-      const latestOrder = sortedOrders[0];
-      const amount = latestOrder?.totalAmount || 0;
+    // คำนวณยอดรวมของออร์เดอร์ที่ยังไม่ได้ชำระเงินทั้งหมด
+    const totalAmount = unpaidOrders.reduce((total, order) => {
+      return total + (order.totalAmount || 0);
+    }, 0);
 
-      console.log(
-        `Using latest order (${latestOrder._id}) amount: ${amount} baht for table ${selectedTable?.name}`
-      );
+    console.log(
+      `Calculated total for ${unpaidOrders.length} unpaid orders: ${totalAmount} baht for table ${selectedTable?.name}`
+    );
 
-      return amount;
-    }
-
-    // ถ้าไม่มีออร์เดอร์ที่ยังไม่ได้ชำระเงิน ก็คืน 0
-    return 0;
+    return totalAmount;
   };
 
   // Handle QR code generation with real payment

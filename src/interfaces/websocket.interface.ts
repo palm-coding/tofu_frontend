@@ -23,11 +23,26 @@ export interface PaymentStatusChangedEvent {
   orderId?: string;
 }
 
+export interface SessionCheckoutEvent {
+  _id: string;
+  branchId: string;
+  tableId: string | { _id: string; [key: string]: unknown };
+  qrCode: string;
+  members: Array<{ clientId: string; userLabel: string; joinedAt: string }>;
+  checkinAt: string;
+  checkoutAt: string;
+  orderIds: string[];
+  createdAt: string;
+  updatedAt: string;
+  [key: string]: unknown;
+}
+
 // สามารถเพิ่ม export EventMap ได้ถ้าต้องการนำไปใช้ในไฟล์อื่น
 export interface EventMap {
   newOrder: Order;
   orderStatusChanged: Order;
   paymentStatusChanged: Payment;
+  sessionCheckout: SessionCheckoutEvent;
   connect: void;
   disconnect: void;
   connect_error: Error;
