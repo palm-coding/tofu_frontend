@@ -6,12 +6,12 @@ import { AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { menuService } from "@/services/menu.service";
-import {
+import type {
   MenuCategory,
   MenuItem,
   NewMenuItemDto,
 } from "@/interfaces/menu.interface";
-import { Branch } from "@/interfaces/branch.interface";
+import type { Branch } from "@/interfaces/branch.interface";
 import { MenuTab } from "./tabs/menu-tab";
 import { CategoriesTab } from "./tabs/categories-tab";
 import { toast } from "sonner";
@@ -40,10 +40,9 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
     branchId: branchId || "",
     name: "",
     description: "",
-    price: "",
+    price: 0,
     categoryId: "",
     isAvailable: true,
-    imageUrl: "/placeholder.svg?height=200&width=200",
   });
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
 
@@ -200,7 +199,8 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
   };
 
   // Menu item functions
-  const handleAddMenuItem = async () => {
+  const handleAddMenuItem = async (file?: File) => {
+    console.log("Received file:", file);
     if (
       !newMenuItem.name.trim() ||
       !newMenuItem.categoryId ||
@@ -219,7 +219,36 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
         branchId: branchId,
       };
 
-      const response = await menuService.createMenuItem(itemToCreate);
+      // Convert itemToCreate to FormData
+      const formData = new FormData();
+
+      // Add all the menu item fields with proper type conversion
+      formData.append("name", itemToCreate.name);
+      formData.append("description", itemToCreate.description);
+      formData.append(
+        "price",
+        Math.max(0, Number(itemToCreate.price)).toString()
+      ); // Ensure price is positive
+      formData.append("categoryId", itemToCreate.categoryId);
+      formData.append("branchId", itemToCreate.branchId);
+      formData.append(
+        "isAvailable",
+        itemToCreate.isAvailable ? "true" : "false"
+      ); // Convert boolean to string
+
+      // Add the image file if provided
+      if (file) {
+        formData.append("image", file);
+        console.log("Added image file to FormData:", file.name);
+      }
+
+      // Log FormData contents for debugging
+      console.log("FormData contents:");
+      for (const [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
+
+      const response = await menuService.createMenuItem(formData);
 
       // ตรวจสอบรูปแบบการตอบกลับ
       const newMenuItemData = response.item || response;
@@ -229,10 +258,9 @@ export function MenuDisplay({ branchId }: MenuManagementProps) {
         branchId: branchId,
         name: "",
         description: "",
-        price: "",
+        price: 0,
         categoryId: "",
         isAvailable: true,
-        imageUrl: "/placeholder.svg?height=200&width=200",
       });
 
       toast.success("เพิ่มเมนูใหม่สำเร็จ");
