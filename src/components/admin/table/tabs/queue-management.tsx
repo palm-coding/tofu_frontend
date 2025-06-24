@@ -27,6 +27,7 @@ import { QueueItem, NewQueueInput } from "@/interfaces/queue.interface";
 
 interface QueueManagementProps {
   queue: QueueItem[];
+
   queueDialogOpen: boolean;
   setQueueDialogOpen: (open: boolean) => void;
   newQueue: NewQueueInput;
@@ -52,6 +53,22 @@ export function QueueManagement({
   getStatusText,
   getTimeAgo,
 }: QueueManagementProps) {
+  // Add all possible statuses to avoid TS error (e.g., 'notified' or others)
+  const statusOrder: Record<string, number> = {
+    waiting: 0,
+    seated: 1,
+    cancelled: 2,
+    notified: 3,
+  };
+  const sortedQueue = [...queue].sort((a, b) => {
+    const statusDiff =
+      (statusOrder[a.status] ?? 99) - (statusOrder[b.status] ?? 99);
+    if (statusDiff !== 0) return statusDiff;
+    // ถ้า status เหมือนกัน ให้เรียงตามเวลา requestedAt จากน้อยไปมาก (คิวเก่าก่อน)
+    return (
+      new Date(a.requestedAt).getTime() - new Date(b.requestedAt).getTime()
+    );
+  });
   return (
     <>
       <div className="flex justify-between items-center">
@@ -78,16 +95,14 @@ export function QueueManagement({
                   ชื่อลูกค้า *
                 </Label>
                 <Input
-                  id="customer-name"
-                  placeholder="กรุณาระบุชื่อลูกค้า"
-                  value={newQueue.customerName}
+                  id="party-name"
+                  value={newQueue.partyName}
                   onChange={(e) =>
                     setNewQueue({
                       ...newQueue,
-                      customerName: e.target.value,
+                      partyName: e.target.value,
                     })
                   }
-                  className="bg-background border-input"
                 />
               </div>
               <div className="space-y-2">
@@ -95,16 +110,14 @@ export function QueueManagement({
                   เบอร์โทรศัพท์
                 </Label>
                 <Input
-                  id="phone-number"
-                  placeholder="081-234-5678"
-                  value={newQueue.phoneNumber}
+                  id="contact-info"
+                  value={newQueue.contactInfo}
                   onChange={(e) =>
                     setNewQueue({
                       ...newQueue,
-                      phoneNumber: e.target.value,
+                      contactInfo: e.target.value,
                     })
                   }
-                  className="bg-background border-input"
                 />
               </div>
               <div className="space-y-2">
@@ -115,15 +128,13 @@ export function QueueManagement({
                   id="party-size"
                   type="number"
                   min="1"
-                  placeholder="จำนวนคน"
                   value={newQueue.partySize}
                   onChange={(e) =>
                     setNewQueue({
                       ...newQueue,
-                      partySize: e.target.value,
+                      partySize: Number(e.target.value),
                     })
                   }
-                  className="bg-background border-input"
                 />
               </div>
               <div className="space-y-2">
@@ -131,13 +142,13 @@ export function QueueManagement({
                   เวลาเช็คอิน *
                 </Label>
                 <Input
-                  id="checkin-time"
+                  id="requested-at"
                   type="time"
-                  value={newQueue.checkinTime}
+                  value={newQueue.requestedAt}
                   onChange={(e) =>
                     setNewQueue({
                       ...newQueue,
-                      checkinTime: e.target.value,
+                      requestedAt: e.target.value, // store as "HH:mm"
                     })
                   }
                   className="bg-background border-input"
@@ -164,7 +175,7 @@ export function QueueManagement({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {queue.map((queueItem) => (
+        {sortedQueue.map((queueItem) => (
           <motion.div
             key={queueItem._id}
             whileHover={{ scale: 1.05 }}
@@ -175,7 +186,7 @@ export function QueueManagement({
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-light text-card-foreground">
-                    {queueItem.customerName}
+                    {queueItem.partyName}
                   </CardTitle>
                   <Badge
                     variant="outline"
@@ -193,11 +204,11 @@ export function QueueManagement({
               </CardHeader>
               <CardContent className="pb-3 flex-grow">
                 <div className="space-y-2">
-                  {queueItem.phoneNumber && (
+                  {queueItem.contactInfo && (
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-card-foreground">
-                        {queueItem.phoneNumber}
+                        {queueItem.contactInfo}
                       </span>
                     </div>
                   )}
@@ -210,7 +221,15 @@ export function QueueManagement({
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-card-foreground">
-                      เวลา: {queueItem.checkinTime}
+                      เวลา:{" "}
+                      {new Date(queueItem.requestedAt).toLocaleString("th-TH", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
                     </span>
                   </div>
                 </div>
@@ -237,15 +256,9 @@ export function QueueManagement({
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full border-input text-foreground hover:bg-accent hover:text-accent-foreground"
-                    onClick={() => handleCancelQueue(queueItem._id)}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    ลบคิว
-                  </Button>
+                  <Badge variant="secondary" className="w-full text-center">
+                    {queueItem.status === "seated" ? "นั่งแล้ว" : "คิวยกเลิก"}
+                  </Badge>
                 )}
               </CardFooter>
             </Card>

@@ -64,10 +64,11 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
   // Queue form state
   const [newQueue, setNewQueue] = useState<NewQueueInput>({
-    customerName: "",
-    phoneNumber: "",
-    partySize: "",
-    checkinTime: "",
+    branchId: branchId || "",
+    partyName: "",
+    contactInfo: "",
+    partySize: 1,
+    requestedAt: "",
   });
 
   // Load tables and queue data
@@ -88,7 +89,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         setTables(tablesResponse.tables);
 
         // Fetch queue data
-        const queueResponse = await queueService.getQueue(branchId);
+        const queueResponse = await queueService.getQueue();
         setQueue(queueResponse.queue);
       } catch (err) {
         console.error("Error loading table data:", err);
@@ -342,7 +343,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
   // ฟังก์ชันเกี่ยวกับคิว - ไม่ต้องแก้ไข
   const handleAddQueue = async () => {
-    if (!newQueue.customerName || !newQueue.partySize || !newQueue.checkinTime)
+    if (!newQueue.partyName || !newQueue.partySize || !newQueue.requestedAt)
       return;
 
     try {
@@ -353,14 +354,31 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         return;
       }
 
-      const response = await queueService.addToQueue(branchId, newQueue);
+      // Convert "HH:mm" to ISO string for requestedAt
+      const today = new Date();
+      const [hours, minutes] = newQueue.requestedAt.split(":");
+      const requestedAtISO = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        Number(hours),
+        Number(minutes)
+      ).toISOString();
+
+      const queueToSend = {
+        ...newQueue,
+        requestedAt: requestedAtISO,
+      };
+
+      const response = await queueService.addToQueue(queueToSend);
       setQueue([...queue, response.queueItem]);
 
       setNewQueue({
-        customerName: "",
-        phoneNumber: "",
-        partySize: "",
-        checkinTime: "",
+        branchId: branchId || "",
+        partyName: "",
+        contactInfo: "",
+        partySize: 1,
+        requestedAt: "",
       });
 
       setQueueDialogOpen(false);
@@ -379,13 +397,11 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         return;
       }
 
-      const response = await queueService.updateQueueStatus(
-        branchId,
-        queueId,
-        "seated"
-      );
+      await queueService.updateQueueStatus(queueId, "seated");
       setQueue(
-        queue.map((item) => (item._id === queueId ? response.queueItem : item))
+        queue.map((item) =>
+          item._id === queueId ? { ...item, status: "seated" } : item
+        )
       );
     } catch (err) {
       console.error("Error updating queue status:", err);
@@ -402,14 +418,18 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         return;
       }
 
-      await queueService.removeFromQueue(branchId, queueId);
-      setQueue(queue.filter((item) => item._id !== queueId));
+      // เปลี่ยนสถานะเป็น cancelled แทนการลบ
+      await queueService.updateQueueStatus(queueId, "cancelled");
+      setQueue(
+        queue.map((item) =>
+          item._id === queueId ? { ...item, status: "cancelled" } : item
+        )
+      );
     } catch (err) {
-      console.error("Error removing from queue:", err);
-      setError("ไม่สามารถลบคิวได้ กรุณาลองอีกครั้ง");
+      console.error("Error cancelling queue:", err);
+      setError("ไม่สามารถยกเลิกคิวได้ กรุณาลองอีกครั้ง");
     }
   };
-
   // บันทึกการชำระเงิน - แก้ไขเพื่อใช้งานกับ session
   const handleMarkAsPaid = async () => {
     if (!selectedTable || !selectedSession) return;

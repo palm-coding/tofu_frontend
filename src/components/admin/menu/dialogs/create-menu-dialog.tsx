@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { MenuCategory, NewMenuItemDto } from "@/interfaces/menu.interface";
 import { Plus, Upload, X, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface CreateMenuDialogProps {
   newMenuItem: NewMenuItemDto;
@@ -174,10 +175,12 @@ export function CreateMenuDialog({
             <div className="space-y-2">
               {imagePreview ? (
                 <div className="relative">
-                  <img
+                  <Image
                     src={imagePreview || "/placeholder.svg"}
                     alt="Preview"
-                    className="w-full h-32 object-cover rounded-md border"
+                    width={200}
+                    height={200}
+                    style={{ objectFit: "cover", borderRadius: "8px" }}
                   />
                   <Button
                     type="button"
@@ -275,17 +278,16 @@ export function CreateMenuDialog({
               id="price"
               type="number"
               min="0"
-              step="0.01"
               value={newMenuItem.price}
               onChange={(e) => {
-                const value = Math.max(0, Number(e.target.value) || 0);
+                const value = Math.max(0, Number(e.target.value));
                 setNewMenuItem({
                   ...newMenuItem,
                   price: value,
                 });
               }}
               disabled={isSubmitting}
-              placeholder="0.00"
+              placeholder="กรอกราคาเมนู"
             />
           </div>
 
