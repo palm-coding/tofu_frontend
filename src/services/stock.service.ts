@@ -11,11 +11,11 @@ const api = axios.create({
 });
 
 export const stockService = {
-  // Get all stocks for a specific branch
-  getStocks: async (branchId: string): Promise<StockResponse> => {
-    console.log(`Fetching stocks for branch ${branchId}`);
+  // Get all stocks
+  getStocks: async (branchId?: string): Promise<StockResponse> => {
+    console.log(`Fetching stocks${branchId ? ` for branch ${branchId}` : ""}`);
     try {
-      const response = await api.get(`/stocks/`);
+      const response = await api.get(`/stocks`);
       console.log("Fetched stocks:", response.data);
       return response.data;
     } catch (error) {
@@ -24,14 +24,11 @@ export const stockService = {
     }
   },
 
-  // Get a specific stock item
-  getStockById: async (
-    branchId: string,
-    stockId: string
-  ): Promise<StockResponse> => {
-    console.log(`Fetching stock ${stockId} for branch ${branchId}`);
+  // Get a specific stock item by ID
+  getStockById: async (stockId: string): Promise<StockResponse> => {
+    console.log(`Fetching stock ${stockId}`);
     try {
-      const response = await api.get(`/branches/stocks/${stockId}`);
+      const response = await api.get(`/stocks/${stockId}`);
       console.log("Fetched stock:", response.data);
       return response.data;
     } catch (error) {
@@ -40,7 +37,7 @@ export const stockService = {
     }
   },
 
-  // Create a new stock entry for a branch
+  // Create a new stock entry
   createStock: async (
     branchId: string,
     ingredientId: string,
@@ -50,9 +47,11 @@ export const stockService = {
       `Creating stock for ingredient ${ingredientId} in branch ${branchId}`
     );
     try {
-      const response = await api.post(`/branches/${branchId}/stocks`, {
+      const response = await api.post(`/stocks`, {
+        branchId,
         ingredientId,
         quantity: initialQuantity,
+        lowThreshold: 10,
       });
       console.log("Created stock:", response.data);
       return response.data;
@@ -61,12 +60,16 @@ export const stockService = {
       throw error;
     }
   },
+
+  // Update stock (general update)
   updateStock: async (
     stockId: string,
-    data: { quantity: number }
+    data: { quantity?: number; lowThreshold?: number }
   ): Promise<StockResponse> => {
+    console.log(`Updating stock ${stockId}:`, data);
     try {
       const response = await api.patch(`/stocks/${stockId}`, data);
+      console.log("Updated stock:", response.data);
       return response.data;
     } catch (error) {
       console.error("Failed to update stock:", error);
@@ -74,20 +77,39 @@ export const stockService = {
     }
   },
 
-  // Update stock threshold for low stock alerts
+  // Adjust stock quantity (ใช้ endpoint ที่เฉพาะเจาะจง)
+  adjustStock: async (
+    stockId: string,
+    adjustmentData: {
+      type: "add" | "remove"; // เปลี่ยนจาก "subtract" เป็น "remove"
+      quantity: number;
+      reason?: string;
+    }
+  ): Promise<StockResponse> => {
+    console.log(`Adjusting stock ${stockId}:`, adjustmentData);
+    try {
+      const response = await api.patch(
+        `/stocks/${stockId}/adjust`,
+        adjustmentData
+      );
+      console.log("Adjusted stock:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to adjust stock ${stockId}:`, error);
+      throw error;
+    }
+  },
+
+  // Update stock threshold for low stock alerts (ใช้ updateStock แทน)
   updateThreshold: async (
-    branchId: string,
     stockId: string,
     threshold: number
   ): Promise<StockResponse> => {
-    console.log(
-      `Updating threshold for stock ${stockId} in branch ${branchId} to ${threshold}`
-    );
+    console.log(`Updating threshold for stock ${stockId} to ${threshold}`);
     try {
-      const response = await api.patch(
-        `/branches/${branchId}/stocks/${stockId}/threshold`,
-        { threshold }
-      );
+      const response = await api.patch(`/stocks/${stockId}`, {
+        lowThreshold: threshold,
+      });
       console.log("Updated threshold:", response.data);
       return response.data;
     } catch (error) {
@@ -100,7 +122,7 @@ export const stockService = {
   deleteStock: async (branchId: string, stockId: string): Promise<void> => {
     console.log(`Deleting stock ${stockId} from branch ${branchId}`);
     try {
-      await api.delete(`/branches/${branchId}/stocks/${stockId}`);
+      await api.delete(`/stocks/${stockId}`);
       console.log("Stock deleted successfully");
     } catch (error) {
       console.error(`Failed to delete stock ${stockId}:`, error);
@@ -108,11 +130,11 @@ export const stockService = {
     }
   },
 
-  // Get low stock items for a branch
-  getLowStockItems: async (branchId: string): Promise<StockResponse> => {
-    console.log(`Fetching low stock items for branch ${branchId}`);
+  // Get low stock items
+  getLowStockItems: async (): Promise<StockResponse> => {
+    console.log("Fetching low stock items");
     try {
-      const response = await api.get(`/branches/${branchId}/stocks/low-stock`);
+      const response = await api.get(`/stocks/low-stock`);
       console.log("Fetched low stock items:", response.data);
       return response.data;
     } catch (error) {
@@ -121,23 +143,24 @@ export const stockService = {
     }
   },
 
-  // Bulk update stocks (useful for inventory reconciliation)
-  bulkUpdateStocks: async (
-    branchId: string,
-    updates: Array<{ stockId: string; quantity: number }>
+  // Bulk adjust stocks (ใช้ endpoint ที่มีอยู่)
+  bulkAdjustStocks: async (
+    adjustments: Array<{
+      stockId: string;
+      type: "add" | "subtract" | "set";
+      quantity: number;
+      reason?: string;
+    }>
   ): Promise<StockResponse> => {
-    console.log(`Bulk updating stocks for branch ${branchId}:`, updates);
+    console.log("Bulk adjusting stocks:", adjustments);
     try {
-      const response = await api.patch(
-        `/branches/${branchId}/stocks/bulk-update`,
-        {
-          updates,
-        }
-      );
-      console.log("Bulk updated stocks:", response.data);
+      const response = await api.patch(`/stocks/bulk-adjust`, {
+        adjustments,
+      });
+      console.log("Bulk adjusted stocks:", response.data);
       return response.data;
     } catch (error) {
-      console.error("Failed to bulk update stocks:", error);
+      console.error("Failed to bulk adjust stocks:", error);
       throw error;
     }
   },

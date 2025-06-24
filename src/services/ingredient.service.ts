@@ -61,7 +61,7 @@ export const ingredientService = {
     data: UpdateIngredientDto
   ): Promise<IngredientResponse> => {
     try {
-      const response = await api.put(`/ingredients/${ingredientId}`, data);
+      const response = await api.patch(`/ingredients/${ingredientId}`, data);
       return response.data;
     } catch (error) {
       console.error(`Failed to update ingredient ${ingredientId}:`, error);

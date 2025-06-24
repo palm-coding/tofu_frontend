@@ -1,4 +1,5 @@
 import type { Stock } from "@/interfaces/stock.interface";
+import type { UpdateIngredientDto } from "@/interfaces/ingredient.interface";
 import {
   Table,
   TableBody,
@@ -18,9 +19,23 @@ interface StockTableProps {
     newQuantity: number,
     adjustmentType: "add" | "subtract" | "set"
   ) => Promise<void>;
+  onUpdateIngredient?: (
+    ingredientId: string,
+    updateData: UpdateIngredientDto
+  ) => Promise<void>;
+  onDeleteIngredient?: (
+    stockId: string,
+    ingredientId: string,
+    ingredientName: string
+  ) => Promise<void>;
 }
 
-export function StockTable({ stocks, onAdjustStock }: StockTableProps) {
+export function StockTable({
+  stocks,
+  onAdjustStock,
+  onUpdateIngredient,
+  onDeleteIngredient,
+}: StockTableProps) {
   const getStockStatus = (quantity: number, lowThreshold: number) => {
     if (quantity <= lowThreshold) {
       return {
@@ -62,7 +77,7 @@ export function StockTable({ stocks, onAdjustStock }: StockTableProps) {
             สถานะ
           </TableHead>
           <TableHead className="text-center font-semibold text-foreground">
-            ปรับปริมาณ
+            จัดการ
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -89,6 +104,7 @@ export function StockTable({ stocks, onAdjustStock }: StockTableProps) {
                 : {
                     name: `Ingredient ${stock.ingredientId}`,
                     unit: "units",
+                    _id: stock.ingredientId,
                   };
 
             const stockStatus = getStockStatus(
@@ -155,6 +171,8 @@ export function StockTable({ stocks, onAdjustStock }: StockTableProps) {
                   <StockAdjustmentDialog
                     stock={stock}
                     onAdjustStock={onAdjustStock}
+                    onUpdateIngredient={onUpdateIngredient}
+                    onDeleteIngredient={onDeleteIngredient}
                   />
                 </TableCell>
               </TableRow>
