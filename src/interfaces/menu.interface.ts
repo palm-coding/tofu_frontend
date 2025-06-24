@@ -15,7 +15,8 @@ export interface MenuItem {
   price: number;
   categoryId: string;
   isAvailable: boolean;
-  imageUrl: string;
+  imageUrl?: string; // Made optional since it might not always exist
+  imagePublicId?: string; // Add this for Cloudinary
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
@@ -25,10 +26,11 @@ export interface NewMenuItemDto {
   branchId: string;
   name: string;
   description: string;
-  price: number | string; // Handle form input
+  price: number;
   categoryId: string;
   isAvailable: boolean;
-  imageUrl: string;
+  imageUrl?: string; // Add for Cloudinary URL
+  imagePublicId?: string; // Add for Cloudinary public ID
 }
 
 export interface UpdateMenuItemDto {
@@ -38,6 +40,7 @@ export interface UpdateMenuItemDto {
   categoryId?: string;
   isAvailable?: boolean;
   imageUrl?: string;
+  imagePublicId?: string; // Add for Cloudinary
 }
 
 // API response interfaces

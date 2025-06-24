@@ -4,7 +4,7 @@ import {
   MenuItemsResponse,
   MenuItemResponse,
   CategoryResponse,
-  NewMenuItemDto,
+  // NewMenuItemDto,
   UpdateMenuItemDto,
 } from "@/interfaces/menu.interface";
 
@@ -105,16 +105,31 @@ export const menuService = {
   },
 
   createMenuItem: async (
-    itemData: NewMenuItemDto
+    itemData: FormData // เปลี่ยนจาก NewMenuItemDto เป็น FormData
   ): Promise<MenuItemResponse> => {
     try {
-      const response = await api.post(`/menu-items`, itemData);
+      const response = await api.post(`/menu-items`, itemData, {
+        headers: {
+          // ไม่ต้องกำหนด Content-Type, axios จะจัดการให้เองเมื่อใช้ FormData
+        },
+      });
       return response.data;
     } catch (error) {
       console.error("Failed to create menu item:", error);
       throw error;
     }
   },
+  // createMenuItem: async (
+  //   itemData: NewMenuItemDto
+  // ): Promise<MenuItemResponse> => {
+  //   try {
+  //     const response = await api.post(`/menu-items`, itemData);
+  //     return response.data;
+  //   } catch (error) {
+  //     console.error("Failed to create menu item:", error);
+  //     throw error;
+  //   }
+  // },
 
   updateMenuItem: async (
     itemId: string,
