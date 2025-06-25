@@ -476,9 +476,10 @@ export function TableDisplay({ branchId }: TableManagementProps) {
 
   // แก้ไขฟังก์ชัน getOrderUrl เพื่อใช้งาน qrCode จาก session
   const getOrderUrl = () => {
-    // ใช้ origin ของเว็บปัจจุบัน (ปรับตามสภาพแวดล้อมจริง)
-    const origin = "http://localhost:3001";
-
+    // ใช้ window.location.origin เพื่อรับ origin ของเว็บปัจจุบันโดยอัตโนมัติ
+    // จะทำงานได้ทั้งใน development และ production environment
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  
     // กรณีที่มี session และมี qrCode - กรณีหลักที่ใช้งาน
     if (selectedSession?.qrCode) {
       return `${origin}/order/${selectedSession.qrCode}`;
@@ -486,7 +487,6 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     // กรณีไม่มีข้อมูลใดๆ
     return `${origin}/order`;
   };
-
   // ฟังก์ชันช่วยเหลือต่างๆ - ย้ายไปไฟล์ tableHelpers.ts แล้ว
 
   // แสดงสถานะ loading
