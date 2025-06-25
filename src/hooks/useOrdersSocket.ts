@@ -46,12 +46,20 @@ export function useOrdersSocket({
   // รับข้อมูล order ที่มีการเปลี่ยนสถานะ
   const handleOrderStatusChanged = useCallback(
     (eventData: unknown) => {
-      const order = eventData as Order;
-      console.log("Order status changed via WebSocket:", order);
-      console.log("Event data type:", typeof eventData);
-      console.log("Event data full structure:", JSON.stringify(eventData, null, 2));
-      if (onOrderStatusChanged) {
-        onOrderStatusChanged(order);
+      // เพิ่ม debug log เพื่อตรวจสอบข้อมูลที่ได้รับ
+      console.log("✨ [useOrdersSocket] Order status changed:", eventData);
+      console.log("✨ [useOrdersSocket] Event data type:", typeof eventData);
+      
+      try {
+        const order = eventData as Order;
+        if (onOrderStatusChanged) {
+          console.log("✨ [useOrdersSocket] Calling onOrderStatusChanged handler");
+          onOrderStatusChanged(order);
+        } else {
+          console.log("✨ [useOrdersSocket] No onOrderStatusChanged handler provided");
+        }
+      } catch (err) {
+        console.error("✨ [useOrdersSocket] Error processing order status:", err);
       }
     },
     [onOrderStatusChanged]
