@@ -197,9 +197,15 @@ const handleNewOrder = useCallback(
           typeof updatedOrder.tableId === "object" && updatedOrder.tableId
             ? updatedOrder.tableId._id
             : updatedOrder.tableId;
+            console.log("Comparing table IDs:", {
+              orderTableId,
+              selectedTableId: selectedTable?._id,
+              match: orderTableId === selectedTable?._id
+            });
   
         // ตรวจสอบเพียง tableId เท่านั้น เพื่อรับการแจ้งเตือนได้กว้างขึ้น
         if (orderTableId === selectedTable?._id) {
+          console.log("Order matches current table, updating state");
           // อัพเดทออร์เดอร์ใน state
           setOrders((prevOrders) => {
             // ตรวจสอบว่าออร์เดอร์นี้มีอยู่แล้วหรือไม่

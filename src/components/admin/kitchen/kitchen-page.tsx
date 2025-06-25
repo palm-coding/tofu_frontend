@@ -378,8 +378,11 @@ export function KitchenDisplay({ branchId }: KitchenDisplayProps) {
         });
       }
 
-      // อัพเดทสถานะออร์เดอร์ (ไม่ส่ง orderLines)
-      await orderService.updateOrderStatus(orderId, newStatus);
+          // อัพเดทสถานะออร์เดอร์ (ไม่ส่ง orderLines)
+    const updatedOrder = await orderService.updateOrderStatus(orderId, newStatus);
+    
+    // ตรวจสอบว่า API คืนค่า order ที่อัพเดตแล้วหรือไม่
+    console.log("Order status updated, response:", updatedOrder);
 
       // อัพเดทข้อมูลในฝั่ง frontend ทันทีเพื่อความรวดเร็ว
       setOrders((currentOrders) =>
