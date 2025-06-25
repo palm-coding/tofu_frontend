@@ -44,17 +44,14 @@ class WebSocketService {
    */
   connect(): Socket {
     if (this.socket?.connected) {
-      console.log("Using existing WebSocket connection");
       return this.socket;
     }
-  
+
     if (this.socket) {
-      console.log("Reconnecting existing WebSocket");
       this.socket.connect();
       return this.socket;
     }
-  
-    console.log("Creating new WebSocket connection to:", this.apiUrl);
+
     this.socket = io(`${this.apiUrl}`, {
       reconnectionAttempts: this.maxConnectionAttempts,
       reconnectionDelay: this.reconnectDelay,
