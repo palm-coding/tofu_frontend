@@ -192,42 +192,32 @@ const handleNewOrder = useCallback(
     (updatedOrder: Order) => {
       console.log("#### OrderStatusChanged EVENT RECEIVED IN TABLE DIALOG ####", updatedOrder);
       
-      // ดึงค่า tableId จาก updatedOrder (อาจเป็น object หรือ string)
+      // เพิ่ม debug log เพื่อให้ทราบว่าได้รับ event แล้ว
       const orderTableId = 
         typeof updatedOrder.tableId === "object" && updatedOrder.tableId
           ? updatedOrder.tableId._id 
           : updatedOrder.tableId;
-      
-      // ดึงค่า sessionId จาก updatedOrder (อาจเป็น object หรือ string)
-      const orderSessionId = 
-        typeof updatedOrder.sessionId === "object" && updatedOrder.sessionId
-          ? updatedOrder.sessionId._id
-          : updatedOrder.sessionId;
-      
-      console.log("OrderStatus Event Data:", {
+  
+      console.log("OrderStatusChange Debug Data:", { 
         orderTableId,
-        tableId: selectedTable?._id,
-        orderSessionId,
-        sessionId: session?._id,
+        currentTableId: selectedTable?._id,
+        match: orderTableId === selectedTable?._id,
         orderStatus: updatedOrder.status
       });
-  
-      // ตรวจสอบ tableId หรือ sessionId อย่างใดอย่างหนึ่ง
+      
+      // เช็คเฉพาะ tableId ไม่ต้องตรวจสอบ sessionId
       if (orderTableId === selectedTable?._id) {
         console.log("✓ Order matches current table, updating state");
         
-        // อัพเดทออร์เดอร์ใน state
+        // อัพเดตออร์เดอร์ใน state และ UI ตามปกติ
         setOrders((prevOrders) => {
-          // ตรวจสอบว่าออร์เดอร์นี้มีอยู่แล้วหรือไม่
           const orderExists = prevOrders.some((o) => o._id === updatedOrder._id);
           
           if (orderExists) {
-            // อัพเดทออร์เดอร์เดิม
             return prevOrders.map((order) =>
               order._id === updatedOrder._id ? updatedOrder : order
             );
           } else {
-            // เพิ่มออร์เดอร์ใหม่และจัดเรียงตาม createdAt
             return [...prevOrders, updatedOrder].sort(
               (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
             );
@@ -239,7 +229,7 @@ const handleNewOrder = useCallback(
           onIsPaidChange(true);
         }
   
-        // แสดง toast notification
+        // แสดง toast notification ตามปกติ
         toast.info(
           `สถานะออร์เดอร์อัพเดท: ${getStatusText(updatedOrder.status)}`,
           {
@@ -259,20 +249,26 @@ const handleNewOrder = useCallback(
           }
         );
       } else {
-        console.log("✗ Order does not match current table, ignoring");
+        console.log("✗ Order does not match current table, ignoring", {
+          orderTableId,
+          tableId: selectedTable?._id,
+        });
       }
     },
-    [selectedTable?._id, selectedTable?.name, session?._id, onIsPaidChange, getStatusText]
+    [selectedTable?._id, selectedTable?.name, onIsPaidChange, getStatusText]
   );
 
-  const { isConnected } = useOrdersSocket({
-    branchId: selectedTable?.branchId,
-    onNewOrder: handleNewOrder,
-    onOrderStatusChanged: handleOrderStatusChanged,
-    onPaymentStatusChanged: handlePaymentStatusChanged,
-    onError: (error) => console.error("WebSocket error:", error),
-  });
-  
+const { isConnected } = useOrdersSocket({
+  branchId: selectedTable?.branchId,  // เหมือนเดิม
+  // sessionId: session?._id,         // ให้ comment บรรทัดนี้ออก
+  onNewOrder: handleNewOrder,
+  onOrderStatusChanged: handleOrderStatusChanged,
+  onPaymentStatusChanged: handlePaymentStatusChanged,
+  onError: (error) => {
+    console.error("TableDetailDialog WebSocket error:", error);
+    toast.error("การเชื่อมต่อแบบเรียลไทม์มีปัญหา", { duration: 3000 });
+  },
+});
 
   // แสดงสถานะการเชื่อมต่อ WebSocket (optional)
   const renderConnectionStatus = () => {
