@@ -123,74 +123,69 @@ export function TableDetailDialog({
     [session?._id, onIsPaidChange]
   );
 
-  // รับการแจ้งเตือนเมื่อมีออร์เดอร์ใหม่
-  const handleNewOrder = useCallback(
-    (order: Order) => {
-      console.log("New order received in TableDetailDialog:", order);
+ // รับการแจ้งเตือนเมื่อมีออร์เดอร์ใหม่
+const handleNewOrder = useCallback(
+  (order: Order) => {
+    console.log("New order received in TableDetailDialog:", order);
 
-      // ดึงค่า ID ที่ต้องการเปรียบเทียบจาก object หรือ string
-      const orderSessionId =
-        typeof order.sessionId === "object" && order.sessionId
-          ? order.sessionId._id
-          : order.sessionId;
+    // ดึงค่า ID ที่ต้องการเปรียบเทียบจาก object หรือ string
+    // const orderSessionId =
+    //  typeof order.sessionId === "object" && order.sessionId
+    //    ? order.sessionId._id
+    //   : order.sessionId;
 
-      const orderTableId =
-        typeof order.tableId === "object" && order.tableId
-          ? order.tableId._id
-          : order.tableId;
+    const orderTableId =
+      typeof order.tableId === "object" && order.tableId
+        ? order.tableId._id
+        : order.tableId;
 
-      // ตรวจสอบว่าออร์เดอร์เป็นของโต๊ะและเซสชันที่กำลังดูอยู่หรือไม่
-      if (
-        orderSessionId === session?._id &&
-        orderTableId === selectedTable?._id
-      ) {
-        console.log("Order matches current session and table, updating state");
+    // ปรับเงื่อนไขให้ตรวจสอบแค่ tableId หรือถ้า tableId ตรงกันแต่ sessionId ไม่ตรงก็ยังรับได้
+    if (orderTableId === selectedTable?._id) {
+      console.log("Order matches current table, updating state");
 
-        // เพิ่มออร์เดอร์ใหม่เข้าไปใน state
-        setOrders((prevOrders) => {
-          // ตรวจสอบว่าออร์เดอร์นี้มีอยู่แล้วหรือไม่
-          const orderExists = prevOrders.some((o) => o._id === order._id);
-          if (orderExists) {
-            console.log("Order already exists in state, not updating");
-            return prevOrders;
-          }
+      // เพิ่มออร์เดอร์ใหม่เข้าไปใน state
+      setOrders((prevOrders) => {
+        // ตรวจสอบว่าออร์เดอร์นี้มีอยู่แล้วหรือไม่
+        const orderExists = prevOrders.some((o) => o._id === order._id);
+        if (orderExists) {
+          console.log("Order already exists in state, not updating");
+          return prevOrders;
+        }
 
-          console.log("Adding new order to state");
-          // เพิ่มออร์เดอร์ใหม่และจัดเรียงตาม createdAt จากใหม่ไปเก่า
-          return [...prevOrders, order].sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        });
+        console.log("Adding new order to state");
+        // เพิ่มออร์เดอร์ใหม่และจัดเรียงตาม createdAt จากใหม่ไปเก่า
+        return [...prevOrders, order].sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+      });
 
-        // แสดง toast notification
-        toast.success("มีออร์เดอร์ใหม่!", {
-          description: (
-            <div>
-              <div className="font-medium">
-                {typeof order.tableId === "object" && order.tableId
-                  ? order.tableId.name
-                  : "ไม่ระบุโต๊ะ"}
-              </div>
-              <div className="mt-1">
-                {order.orderLines.length} รายการ จากลูกค้า:{" "}
-                {order.orderBy || "ไม่ระบุ"}
-              </div>
+      // แสดง toast notification
+      toast.success("มีออร์เดอร์ใหม่!", {
+        description: (
+          <div>
+            <div className="font-medium">
+              {typeof order.tableId === "object" && order.tableId
+                ? order.tableId.name
+                : "ไม่ระบุโต๊ะ"}
             </div>
-          ),
-          duration: 4000,
-        });
-      } else {
-        console.log("Order does not match current session/table, ignoring", {
-          orderSessionId,
-          sessionId: session?._id,
-          orderTableId,
-          tableId: selectedTable?._id,
-        });
-      }
-    },
-    [session?._id, selectedTable?._id]
-  );
+            <div className="mt-1">
+              {order.orderLines.length} รายการ จากลูกค้า:{" "}
+              {order.orderBy || "ไม่ระบุ"}
+            </div>
+          </div>
+        ),
+        duration: 4000,
+      });
+    } else {
+      console.log("Order does not match current table, ignoring", {
+        orderTableId,
+        tableId: selectedTable?._id,
+      });
+    }
+  },
+  [selectedTable?._id]
+);
 
   // รับการแจ้งเตือนเมื่อมีการเปลี่ยนสถานะออร์เดอร์
   const handleOrderStatusChanged = useCallback(
