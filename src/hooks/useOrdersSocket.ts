@@ -48,6 +48,8 @@ export function useOrdersSocket({
     (eventData: unknown) => {
       const order = eventData as Order;
       console.log("Order status changed via WebSocket:", order);
+      console.log("Event data type:", typeof eventData);
+      console.log("Event data full structure:", JSON.stringify(eventData, null, 2));
       if (onOrderStatusChanged) {
         onOrderStatusChanged(order);
       }
@@ -60,8 +62,7 @@ export function useOrdersSocket({
     (eventData: unknown) => {
       const payment = eventData as Payment;
       console.log("Payment status changed via WebSocket:", payment);
-      console.log("Event data type:", typeof eventData);
-      console.log("Event data full structure:", JSON.stringify(eventData, null, 2));
+
       if (onPaymentStatusChanged) {
         onPaymentStatusChanged(payment);
       }
