@@ -85,6 +85,8 @@ export const getStatusText = (status: string) => {
       return "เสิร์ฟแล้ว";
     case "paid":
       return "ชำระเงินแล้ว";
+    case "cancelled":
+      return "ยกเลิกแล้ว";
     default:
       return "ไม่ทราบ";
   }
@@ -107,6 +109,8 @@ export const getStatusColor = (status: string) => {
       return "bg-green-500 hover:bg-green-600 text-white";
     case "paid":
       return "bg-emerald-500 hover:bg-emerald-600 text-white";
+    case "cancelled":
+      return "bg-red-500 hover:bg-red-600 text-white";
     default:
       return "";
   }
@@ -152,6 +156,8 @@ export const getStatusBadgeStyle = (status: string) => {
       return "bg-green-100 text-green-800 dark:bg-green-900/60 dark:text-green-100 border-green-200 dark:border-green-700";
     case "paid":
       return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-100 border-emerald-200 dark:border-emerald-700";
+    case "cancelled":
+      return "bg-red-200 text-red-800 dark:bg-red-900/60 dark:text-red-100 border-red-300 dark:border-red-700";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -165,19 +171,19 @@ export const getExpirationTime = (dateString: string) => {
   try {
     const expiryDate = new Date(dateString);
     const now = new Date();
-    
+
     // Check if date is invalid or already expired
     if (isNaN(expiryDate.getTime()) || expiryDate <= now) {
       return "หมดอายุแล้ว";
     }
-    
+
     // Calculate time difference in milliseconds
     const diffMs = expiryDate.getTime() - now.getTime();
-    
+
     // Convert to hours and minutes
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
     // Format the time remaining
     if (hours > 0) {
       return `${hours} ชั่วโมง ${minutes} นาที`;

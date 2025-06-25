@@ -27,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { MenuCategory, NewMenuItemDto } from "@/interfaces/menu.interface";
 import { Plus, Upload, X, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface CreateMenuDialogProps {
   newMenuItem: NewMenuItemDto;
@@ -94,8 +95,8 @@ export function CreateMenuDialog({
     }
 
     const price = Number(newMenuItem.price);
-    if (isNaN(price) || price <= 0 || newMenuItem.price === 0) {
-      toast.error("กรุณากรอกราคาที่ถูกต้อง (ต้องมากกว่า 0)");
+    if (isNaN(price) || price < 0) {
+      toast.error("กรุณากรอกราคาที่ถูกต้อง (ต้องไม่ต่ำกว่า 0)");
       return false;
     }
 
@@ -174,10 +175,12 @@ export function CreateMenuDialog({
             <div className="space-y-2">
               {imagePreview ? (
                 <div className="relative">
-                  <img
+                  <Image
                     src={imagePreview || "/placeholder.svg"}
                     alt="Preview"
-                    className="w-full h-32 object-cover rounded-md border"
+                    width={200}
+                    height={200}
+                    style={{ objectFit: "cover", borderRadius: "8px" }}
                   />
                   <Button
                     type="button"
@@ -275,30 +278,16 @@ export function CreateMenuDialog({
               id="price"
               type="number"
               min="0"
-              step="0.01"
-              value={newMenuItem.price === 0 ? "" : newMenuItem.price}
+              value={newMenuItem.price}
               onChange={(e) => {
-                const inputValue = e.target.value;
-
-                if (inputValue === "" || inputValue === null) {
-                  // ถ้าเป็นค่าว่างให้เซ็ต price เป็น 0
-                  setNewMenuItem({
-                    ...newMenuItem,
-                    price: 0,
-                  });
-                } else {
-                  // แปลงค่าและตรวจสอบว่าเป็นตัวเลขที่ถูกต้อง
-                  const numericValue = Number(inputValue);
-                  if (!isNaN(numericValue) && numericValue >= 0) {
-                    setNewMenuItem({
-                      ...newMenuItem,
-                      price: numericValue,
-                    });
-                  }
-                }
+                const value = Math.max(0, Number(e.target.value));
+                setNewMenuItem({
+                  ...newMenuItem,
+                  price: value,
+                });
               }}
               disabled={isSubmitting}
-              placeholder="0.00"
+              placeholder="กรอกราคาเมนู"
             />
           </div>
 
