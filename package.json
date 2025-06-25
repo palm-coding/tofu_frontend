@@ -5,8 +5,15 @@
   "scripts": {
     "dev": "next dev --turbopack -p 3001",
     "build": "next build",
+    "build:dev": "NODE_ENV=development next build",
+    "build:prod": "NODE_ENV=production next build",
     "start": "next start",
-    "lint": "next lint"
+    "start:dev": "NODE_ENV=development next start",
+    "start:prod": "NODE_ENV=production next start",
+    "lint": "next lint",
+    "preview": "npm run build && npm run start",
+    "deploy:dev": "NODE_ENV=development npm run build:dev && npm run start:dev",
+    "deploy:prod": "NODE_ENV=production npm run build:prod && npm run start:prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
