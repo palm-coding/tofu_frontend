@@ -88,6 +88,11 @@ export function useOrdersSocket({
     try {
       const socket = webSocketService.connect();
 
+       // เพิ่ม debug listener เพื่อดูทุก event ที่เข้ามา
+    socket.onAny((eventName, ...args) => {
+      console.log(`[WebSocket Debug] Event received: ${eventName}`, args);
+    });
+
       // ตั้งค่า listeners สำหรับสถานะการเชื่อมต่อ
       const onConnect = () => setIsConnected(true);
       const onDisconnect = () => {

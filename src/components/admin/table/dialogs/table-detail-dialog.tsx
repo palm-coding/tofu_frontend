@@ -37,6 +37,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getExpirationTime } from "../utils/table-helper";
 import { useOrdersSocket } from "@/hooks/useOrdersSocket";
 import { toast } from "sonner";
+import { webSocketService } from "@/services/websocket.service";
 
 interface TableDetailDialogProps {
   open: boolean;
@@ -241,23 +242,39 @@ const handleOrderStatusChanged = useCallback(
   [onIsPaidChange, getStatusText, selectedTable?.name]
 );
 
-    const { isConnected } = useOrdersSocket({
-      branchId: selectedTable?.branchId,
-      // เพิ่ม sessionId เพื่อให้รับ event ทุกออร์เดอร์ในเซสชันนี้
-      sessionId: session?._id, 
-      // ไม่ต้องระบุ orderId เฉพาะเจาะจง เพื่อให้รับทุก event ของโต๊ะ
-      // orderId: currentPayment?.orderId, <-- ลบบรรทัดนี้ออก
-      onNewOrder: handleNewOrder,
-      onOrderStatusChanged: handleOrderStatusChanged,
-      onPaymentStatusChanged: handlePaymentStatusChanged,
-      onError: (error) => {
-        console.error("WebSocket error in TableDetailDialog:", error);
-        // เพิ่ม toast แจ้งเตือนเมื่อมีปัญหาการเชื่อมต่อ
-        toast.error("การเชื่อมต่อแบบเรียลไทม์มีปัญหา", {
-          description: "อาจไม่ได้รับการแจ้งเตือนแบบทันที"
-        });
-      },
+const { isConnected } = useOrdersSocket({
+  branchId: selectedTable?.branchId,
+  sessionId: session?._id, 
+  onNewOrder: handleNewOrder,
+  onOrderStatusChanged: handleOrderStatusChanged,
+  onPaymentStatusChanged: handlePaymentStatusChanged,
+  onError: (error) => {
+    console.error("WebSocket error in TableDetailDialog:", error);
+    toast.error("การเชื่อมต่อแบบเรียลไทม์มีปัญหา", {
+      description: "อาจไม่ได้รับการแจ้งเตือนแบบทันที"
     });
+  },
+});
+
+useEffect(() => {
+  if (open && session?._id) {
+    console.log("TableDetailDialog opened with session:", session._id);
+    console.log("TableDetailDialog watching table:", selectedTable?._id);
+    
+    // ดักฟัง event ทุกอันเฉพาะเวลา dialog เปิด
+    const socket = webSocketService.connect();
+    
+    const handleAnyEvent = (event: string, ...data: unknown[]) => {
+      console.log(`[TableDetailDialog] Event received: ${event}`, data);
+    };
+    
+    socket.onAny(handleAnyEvent);
+    
+    return () => {
+      socket.offAny(handleAnyEvent);
+    };
+  }
+}, [open, session?._id, selectedTable?._id]);
 
   // แสดงสถานะการเชื่อมต่อ WebSocket (optional)
   const renderConnectionStatus = () => {
