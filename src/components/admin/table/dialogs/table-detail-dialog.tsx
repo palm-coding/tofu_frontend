@@ -267,7 +267,6 @@ const handleNewOrder = useCallback(
 
   const { isConnected } = useOrdersSocket({
     branchId: selectedTable?.branchId,
-    sessionId: session?._id, // เพิ่มบรรทัดนี้เพื่อติดตามทุกออร์เดอร์ในเซสชัน
     onNewOrder: handleNewOrder,
     onOrderStatusChanged: handleOrderStatusChanged,
     onPaymentStatusChanged: handlePaymentStatusChanged,
