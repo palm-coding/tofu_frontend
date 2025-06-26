@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
-import { Check, MinusCircle, PlusCircle, ShoppingCart, X } from "lucide-react";
+import { Check, Loader2, MinusCircle, PlusCircle, ShoppingCart, X } from "lucide-react";
 import { CartItem } from "@/interfaces/cart.interface";
 
 interface OrderCartDialogProps {
@@ -21,6 +21,7 @@ interface OrderCartDialogProps {
   updateCartItemNote: (itemId: string, note: string) => void;
   calculateTotal: () => number;
   submitOrder: () => void;
+  isSubmitting: boolean;
 }
 
 export function OrderCartDialog({
@@ -32,6 +33,7 @@ export function OrderCartDialog({
   updateCartItemNote,
   calculateTotal,
   submitOrder,
+  isSubmitting,
 }: OrderCartDialogProps) {
   return (
     <Dialog open={cartDialogOpen} onOpenChange={setCartDialogOpen}>
@@ -122,11 +124,23 @@ export function OrderCartDialog({
                 ยกเลิก
               </Button>
               <Button
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-300 rounded-xl py-3"
                 onClick={submitOrder}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                disabled={isSubmitting} // ปิดการใช้งานปุ่มขณะที่กำลังส่งคำสั่ง
               >
-                <Check className="mr-2 h-4 w-4" />
-                ยืนยันการสั่ง
+                {isSubmitting ? (
+                  // แสดง loading indicator เมื่อกำลังส่งคำสั่ง
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    กำลังสั่งอาหาร...
+                  </>
+                ) : (
+                  // แสดงข้อความปกติเมื่อไม่ได้อยู่ในขั้นตอนการส่งคำสั่ง
+                  <>
+                    <Check className="mr-2 h-4 w-4" />
+                    ยืนยันการสั่ง
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </>

@@ -98,6 +98,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
   const [isTabsSticky, setIsTabsSticky] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [clientId, setClientId] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Refs for scroll detection
   const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -658,6 +659,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
     if (cart.length === 0) return;
 
     try {
+      setIsSubmitting(true);
       // แปลงข้อมูลจาก cart เป็น orderLines
       const orderLines = cart.map((item) => ({
         menuItemId: item._id,
@@ -704,6 +706,9 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
     } catch (error) {
       console.error("Failed to submit order:", error);
       toast.error("เกิดข้อผิดพลาดในการสั่งอาหาร กรุณาลองอีกครั้ง");
+    } finally {
+      // รีเซ็ตสถานะการส่งคำสั่ง ไม่ว่าจะสำเร็จหรือไม่ก็ตาม
+      setIsSubmitting(false);
     }
   };
 
@@ -1077,6 +1082,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
         updateCartItemNote={updateCartItemNote}
         calculateTotal={calculateTotal}
         submitOrder={submitOrder}
+        isSubmitting={isSubmitting}
       />
 
       {/* Floating Cart Button */}
