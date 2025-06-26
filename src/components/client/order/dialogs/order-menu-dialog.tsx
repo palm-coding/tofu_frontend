@@ -116,7 +116,7 @@ export function OrderMenuDialog({
             </div>
 
             {/* หมายเหตุ */}
-            <div className="space-y-2">
+            <div className="space-y-2 my-2">
               <Label htmlFor="note" className="text-foreground font-medium">
                 หมายเหตุ
               </Label>
