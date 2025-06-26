@@ -39,7 +39,14 @@ export function OrderMenuDialog({
 
   return (
     <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] bg-background border-0 shadow-2xl">
+      <DialogContent
+        className="sm:max-w-md max-h-[90vh] bg-background border-0 shadow-2xl"
+        autoFocus={false}
+        onInteractOutside={(e) => {
+          // ป้องกันการแสดง keyboard เมื่อกดด้านนอก dialog
+          e.preventDefault();
+        }}
+      >
         <DialogHeader className="text-center">
           <DialogTitle className="text-2xl font-light text-foreground">
             {selectedItem.name}
@@ -78,6 +85,7 @@ export function OrderMenuDialog({
                 onChange={(e) => setItemNote(e.target.value)}
                 className="border-input focus:border-ring rounded-lg resize-none"
                 rows={2}
+                autoFocus={false} // ป้องกันการ focus อัตโนมัติ
               />
             </div>
 

@@ -21,6 +21,7 @@ import {
   Coffee as CoffeeIcon,
   Cookie,
   LucideIcon,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -355,7 +356,33 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
 
     loadInitialData();
   }, [qrCode]);
+  
+  useEffect(() => {
+    const fetchOrderHistory = async () => {
+      if (activeTab === "history" && sessionId) {
+        try {
+          console.log("กำลังโหลดประวัติการสั่งเนื่องจากเปลี่ยนแท็บ");
+          const historyResponse = await orderService.getOrdersForSession(
+            sessionId
+          );
+          if (Array.isArray(historyResponse)) {
+            setOrderHistory(historyResponse);
+            console.log(
+              "อัพเดทประวัติการสั่งเรียบร้อย จำนวน:",
+              historyResponse.length
+            );
+          }
+        } catch (error) {
+          console.error("ไม่สามารถโหลดประวัติการสั่งได้:", error);
+          toast.error("ไม่สามารถโหลดประวัติการสั่งได้", {
+            description: "กรุณาลองอีกครั้งภายหลัง",
+          });
+        }
+      }
+    };
 
+    fetchOrderHistory();
+  }, [activeTab, sessionId]);
   // Helper function to get branchId from session - ระบุ Type ที่ชัดเจน
   const getBranchIdFromSession = (
     sessionData: Session | Record<string, unknown>
@@ -1084,6 +1111,24 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
         submitOrder={submitOrder}
         isSubmitting={isSubmitting}
       />
+
+      {/* Floating History Button */}
+      {Array.isArray(orderHistory) &&
+        orderHistory.length > 0 &&
+        activeTab !== "history" && (
+          <div className="fixed bottom-6 left-6 md:hidden">
+            <Button
+              size="lg"
+              className="rounded-full h-16 w-16 bg-secondary hover:bg-secondary/90 text-secondary-foreground shadow-2xl transition-all duration-300"
+              onClick={() => setActiveTab("history")}
+            >
+              <History className="h-6 w-6" />
+              <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full h-6 w-6 flex items-center justify-center text-sm font-medium">
+                {orderHistory.length}
+              </span>
+            </Button>
+          </div>
+        )}
 
       {/* Floating Cart Button */}
       {Array.isArray(cart) && cart.length > 0 && (
