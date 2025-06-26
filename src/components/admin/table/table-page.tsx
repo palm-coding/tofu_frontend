@@ -180,17 +180,18 @@ export function TableDisplay({ branchId }: TableManagementProps) {
   const handleCheckout = async (tableId: string) => {
     try {
       setError(null);
+      console.log("Starting checkout for table:", tableId);
 
       if (!branchId) {
         setError("Branch ID is required");
         return;
       }
 
-      // 1. ค้นหา active session ของโต๊ะนี้
       try {
         const sessionResponse = await sessionService.getActiveSessionForTable(
           tableId
         );
+
         if (sessionResponse) {
           // 1.1 ตรวจสอบออร์เดอร์ที่ยังไม่ได้เสิร์ฟในเซสชัน
           const orders = await orderService.getOrdersForSession(
@@ -200,16 +201,13 @@ export function TableDisplay({ branchId }: TableManagementProps) {
             (order) => order.status !== "served"
           );
 
-          // 1.2 อัพเดทสถานะออร์เดอร์ทั้งหมดที่ยังไม่ได้เสิร์ฟเป็น "served"
+          // 1.2 อัพเดทสถานะออร์เดอร์ที่ยังไม่ได้เสิร์ฟ
           if (nonServedOrders.length > 0) {
             console.log(
               `Found ${nonServedOrders.length} non-served orders, updating status...`
             );
-
-            // อัพเดทสถานะทีละออร์เดอร์
             for (const order of nonServedOrders) {
               await orderService.updateOrderStatus(order._id, "served");
-              console.log(`Updated order ${order._id} status to "served"`);
             }
           }
 
@@ -220,9 +218,15 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         // 3. อัพเดตสถานะโต๊ะเป็น available
         await tableService.updateTable(tableId, { status: "available" });
 
-        // เพิ่มส่วนการแจ้งเตือนผ่าน WebSocket
+        // Close dialog FIRST before doing potentially slow operations
+        setDetailsDialogOpen(false);
+
+        // 4. แจ้งเตือนผ่าน WebSocket แบบ fail-safe
         if (branchId) {
           try {
+            console.log(
+              "Sending WebSocket notification for table status change..."
+            );
             await webSocketService.notifyTableStatusChanged(
               tableId,
               "available",
@@ -230,12 +234,14 @@ export function TableDisplay({ branchId }: TableManagementProps) {
             );
             console.log("Sent table status change notification via WebSocket");
           } catch (wsErr) {
-            console.error("Failed to notify table status change:", wsErr);
-            // ไม่ต้องหยุดการทำงานถ้าการแจ้งเตือน WebSocket ล้มเหลว
+            console.error(
+              "WebSocket notification failed, but continuing checkout:",
+              wsErr
+            );
           }
         }
 
-        // 4. อัพเดต tables state
+        // 5. อัพเดต tables state
         setTables(
           tables.map((table) =>
             table._id === tableId
@@ -251,13 +257,11 @@ export function TableDisplay({ branchId }: TableManagementProps) {
           )
         );
 
-        // 5. รีเซ็ตข้อมูลที่เลือกอยู่
+        // 6. รีเซ็ตข้อมูลที่เลือกอยู่
         if (selectedTable?._id === tableId) {
           setSelectedTable(null);
           setSelectedSession(null);
         }
-
-        setDetailsDialogOpen(false);
       } catch (sessionError) {
         console.warn("No active session found:", sessionError);
       }
@@ -272,36 +276,50 @@ export function TableDisplay({ branchId }: TableManagementProps) {
     (tableEvent: TableStatusChangedEvent) => {
       console.log("Table status changed notification received:", tableEvent);
 
+      // Safety check for the structure of the event
+      if (!tableEvent || typeof tableEvent !== "object") {
+        console.error("Invalid table event data received:", tableEvent);
+        return;
+      }
+
+      // Extract tableId and handle both possible data structures
+      const tableId = tableEvent?._id;
+      const tableName = tableEvent?.name || "Unknown Table";
+      const newStatus = tableEvent?.status || "unknown";
+
+      if (!tableId) {
+        console.error("Could not determine table ID from event:", tableEvent);
+        return;
+      }
+
       // อัพเดต UI เมื่อมีการเปลี่ยนแปลงสถานะโต๊ะ
       setTables((currentTables) =>
         currentTables.map((table) => {
-          if (table._id === tableEvent.table._id) {
+          if (table._id === tableId) {
             return {
               ...table,
-              status: tableEvent.newStatus,
+              status: newStatus,
             };
           }
           return table;
         })
       );
 
-      // แสดง toast notification
-      toast.info(
-        `สถานะโต๊ะเปลี่ยนเป็น ${getStatusText(tableEvent.newStatus)}`,
-        {
-          description: (
-            <div>
-              <div className="font-medium">{tableEvent.table.name}</div>
-              <div className="text-xs text-muted-foreground mt-1">
-                อัพเดตเมื่อ {getTimeAgo(tableEvent.updatedAt)}
-              </div>
+      // แสดง toast notification with defensive coding
+      toast.info(`สถานะโต๊ะเปลี่ยนเป็น ${getStatusText(newStatus)}`, {
+        description: (
+          <div>
+            <div className="font-medium">{tableName}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              อัพเดตเมื่อ{" "}
+              {getTimeAgo(tableEvent.updatedAt || new Date().toISOString())}
             </div>
-          ),
-          duration: 3000,
-        }
-      );
+          </div>
+        ),
+        duration: 3000,
+      });
     },
-    [getStatusText, getTimeAgo]
+    [getStatusText, getTimeAgo, setTables]
   );
 
   // เชื่อมต่อกับ WebSocket
@@ -623,6 +641,7 @@ export function TableDisplay({ branchId }: TableManagementProps) {
                 getStatusBadgeStyle={getStatusBadgeStyle}
                 getStatusText={getStatusText}
                 calculateTableTotal={calculateTableTotal}
+                isConnected={isConnected}
               />
             </TabsContent>
 

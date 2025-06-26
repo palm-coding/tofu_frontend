@@ -88,6 +88,8 @@ export function useOrdersSocket({
   // เพิ่ม handler สำหรับการเปลี่ยนแปลงสถานะโต๊ะ
   const handleTableStatusChanged = useCallback(
     (eventData: unknown) => {
+      console.log("Table status event raw data:", eventData);
+      console.log("Table status event type:", typeof eventData);
       const tableEvent = eventData as TableStatusChangedEvent;
       console.log("Table status changed via WebSocket:", tableEvent);
       if (onTableStatusChanged) {
