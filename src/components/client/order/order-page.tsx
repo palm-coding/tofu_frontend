@@ -359,9 +359,9 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
 
   useEffect(() => {
     const fetchOrderHistory = async () => {
-      if (sessionId) {
+      if (activeTab === "history" && sessionId) {
         try {
-          console.log("กำลังโหลดประวัติการสั่งเมื่อ sessionId พร้อม");
+          console.log("กำลังโหลดประวัติการสั่งเนื่องจากเปลี่ยนแท็บ");
           const historyResponse = await orderService.getOrdersForSession(
             sessionId
           );
@@ -382,7 +382,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
     };
 
     fetchOrderHistory();
-  }, [sessionId]);
+  }, [activeTab, sessionId]);
   // Helper function to get branchId from session - ระบุ Type ที่ชัดเจน
   const getBranchIdFromSession = (
     sessionData: Session | Record<string, unknown>
@@ -683,7 +683,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
 
   // แก้ไขฟังก์ชัน submitOrder เพื่อใช้ฟังก์ชัน helper สำหรับดึง ID
   const submitOrder = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isSubmitting) return;
 
     try {
       setIsSubmitting(true);
@@ -714,11 +714,6 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
       // แก้ไขจาก orderService.submitOrder เป็น orderService.createOrder
       const response = await orderService.createOrder(orderRequest);
 
-      // Update order history
-      if (response && response.order) {
-        setOrderHistory([response.order, ...orderHistory]);
-      }
-
       // Clear cart
       setCart([]);
       localStorage.setItem(`cart_${qrCode}`, JSON.stringify([]));
@@ -730,6 +725,39 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
       toast.success("สั่งอาหารเรียบร้อย", {
         description: "ระบบได้รับออร์เดอร์ของคุณแล้ว",
       });
+
+      // ดึงประวัติการสั่งอาหารใหม่ทันที เพื่อให้แน่ใจว่าข้อมูลเป็นปัจจุบัน
+      if (sessionId) {
+        try {
+          console.log("กำลังดึงข้อมูลประวัติการสั่งหลังจากสั่งอาหารเสร็จ");
+          const historyResponse = await orderService.getOrdersForSession(
+            sessionId
+          );
+
+          if (Array.isArray(historyResponse)) {
+            setOrderHistory(historyResponse);
+            console.log(
+              "อัพเดทประวัติการสั่งหลังสั่งอาหารเสร็จ จำนวน:",
+              historyResponse.length
+            );
+          }
+        } catch (historyError) {
+          console.error(
+            "ไม่สามารถดึงข้อมูลประวัติการสั่งหลังสั่งอาหาร:",
+            historyError
+          );
+          // แม้จะดึงประวัติล้มเหลว เราก็ยังมีข้อมูลจากการสั่งล่าสุดที่สามารถแสดงได้
+          if (response && response.order) {
+            setOrderHistory([response.order, ...orderHistory]);
+          }
+        }
+      } else if (response && response.order) {
+        // ถ้าไม่มี sessionId ใช้ข้อมูลจากการตอบกลับเพื่ออัพเดทประวัติ
+        setOrderHistory([response.order, ...orderHistory]);
+      }
+
+      // ลบบรรทัดด้านล่างนี้ เพื่อไม่ให้เปลี่ยนไปยังแท็บประวัติโดยอัตโนมัติ
+      // setActiveTab("history");
     } catch (error) {
       console.error("Failed to submit order:", error);
       toast.error("เกิดข้อผิดพลาดในการสั่งอาหาร กรุณาลองอีกครั้ง");

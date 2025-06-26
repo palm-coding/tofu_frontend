@@ -73,22 +73,6 @@ export function OrderMenuDialog({
               {selectedItem.description}
             </p>
 
-            {/* หมายเหตุ */}
-            <div className="space-y-2">
-              <Label htmlFor="note" className="text-foreground font-medium">
-                หมายเหตุ
-              </Label>
-              <Textarea
-                id="note"
-                placeholder="เช่น ไม่ใส่น้ำแข็ง, หวานน้อย, เผ็ดน้อย"
-                value={itemNote}
-                onChange={(e) => setItemNote(e.target.value)}
-                className="border-input focus:border-ring rounded-lg resize-none"
-                rows={2}
-                autoFocus={false} // ป้องกันการ focus อัตโนมัติ
-              />
-            </div>
-
             {/* จำนวน */}
             <div className="space-y-3">
               <Label className="text-foreground font-medium">จำนวน</Label>
@@ -129,6 +113,22 @@ export function OrderMenuDialog({
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* หมายเหตุ */}
+            <div className="space-y-2">
+              <Label htmlFor="note" className="text-foreground font-medium">
+                หมายเหตุ
+              </Label>
+              <Textarea
+                id="note"
+                placeholder="เช่น ไม่ใส่น้ำแข็ง, หวานน้อย, เผ็ดน้อย"
+                value={itemNote}
+                onChange={(e) => setItemNote(e.target.value)}
+                className="border-input focus:border-ring rounded-lg resize-none"
+                rows={2}
+                autoFocus={false} // ป้องกันการ focus อัตโนมัติ
+              />
             </div>
           </div>
         </ScrollArea>
