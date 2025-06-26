@@ -191,38 +191,76 @@ const handleNewOrder = useCallback(
   const handleOrderStatusChanged = useCallback(
     (updatedOrder: Order) => {
       console.log("Order status changed in TableDetailDialog:", updatedOrder);
-
-      // ตรวจสอบว่าเป็นออร์เดอร์ของโต๊ะและเซสชันที่กำลังดูอยู่หรือไม่
-      if (
-        updatedOrder.sessionId === session?._id &&
-        updatedOrder.tableId._id === selectedTable?._id
-      ) {
+  
+      // ดึงค่า ID ที่ต้องการเปรียบเทียบจาก object หรือ string อย่างปลอดภัย
+      // const orderSessionId = typeof updatedOrder.sessionId === "object" && updatedOrder.sessionId 
+      //   ? updatedOrder.sessionId._id 
+      //   : updatedOrder.sessionId;
+      
+      const orderTableId = typeof updatedOrder.tableId === "object" && updatedOrder.tableId 
+        ? updatedOrder.tableId._id 
+        : updatedOrder.tableId;
+      
+      console.log("Comparing IDs:", {
+        orderTableId,
+        tableId: selectedTable?._id,
+        match: orderTableId === selectedTable?._id
+      });
+  
+      // ตรวจสอบเฉพาะ tableId เท่านั้น (ไม่ต้องตรวจสอบ sessionId ด้วย)
+      if (orderTableId === selectedTable?._id) {
+        console.log("✅ Order matches current table, updating state");
+        
         // อัพเดทออร์เดอร์ใน state
-        setOrders((prevOrders) =>
-          prevOrders.map((order) =>
-            order._id === updatedOrder._id ? updatedOrder : order
-          )
-        );
-
+        setOrders((prevOrders) => {
+          // ดีบัก state ก่อนและหลังอัปเดต
+          console.log("Orders before update:", prevOrders.map(o => ({ id: o._id, status: o.status })));
+          
+          const updatedOrders = prevOrders.map((order) => {
+            if (order._id === updatedOrder._id) {
+              console.log(`Updating order ${order._id} from ${order.status} to ${updatedOrder.status}`);
+              return updatedOrder;
+            }
+            return order;
+          });
+          
+          console.log("Orders after update:", updatedOrders.map(o => ({ id: o._id, status: o.status })));
+          return updatedOrders;
+        });
+  
         // ถ้าสถานะเปลี่ยนเป็น "paid" ให้อัพเดท isPaid
         if (updatedOrder.status === "paid") {
           onIsPaidChange(true);
         }
-
-        // แสดง toast notification
+  
+        // แสดง toast notification ที่มีรายละเอียดมากขึ้น
         toast.info(
           `สถานะออร์เดอร์อัพเดท: ${getStatusText(updatedOrder.status)}`,
           {
-            description: `ออร์เดอร์ #${updatedOrder._id.substring(0, 8)}`,
+            description: (
+              <div>
+                <div className="font-medium">
+                  {typeof updatedOrder.tableId === "object" && updatedOrder.tableId
+                    ? updatedOrder.tableId.name
+                    : selectedTable?.name || "ไม่ระบุโต๊ะ"}
+                </div>
+                <div className="mt-1">
+                  ออร์เดอร์ #{updatedOrder._id.substring(0, 8)}
+                </div>
+              </div>
+            ),
+            duration: 4000,
           }
         );
+      } else {
+        console.log("⛔️ Order does not match current table, ignoring");
       }
     },
-    [session?._id, selectedTable?._id, onIsPaidChange, getStatusText]
+    [selectedTable?._id, selectedTable?.name, onIsPaidChange, getStatusText]
   );
-
   const { isConnected } = useOrdersSocket({
     branchId: selectedTable?.branchId,
+    sessionId: session?._id,
     orderId: currentPayment?.orderId, // ถ้ามี payment ให้ติดตาม order room ที่เกี่ยวข้อง
     onNewOrder: handleNewOrder, // เพิ่มการจัดการออร์เดอร์ใหม่
     onOrderStatusChanged: handleOrderStatusChanged, // เพิ่มการจัดการเปลี่ยนสถานะออร์เดอร์
