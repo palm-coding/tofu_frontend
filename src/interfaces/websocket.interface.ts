@@ -1,5 +1,6 @@
 import { Order } from "./order.interface";
 import { Payment } from "./payment.interface";
+import { Table, TableStatus } from "./table.interface"; 
 
 export interface SocketResponse {
   success: boolean;
@@ -23,6 +24,14 @@ export interface PaymentStatusChangedEvent {
   orderId?: string;
 }
 
+export interface TableStatusChangedEvent {
+  table: Table;
+  previousStatus?: TableStatus;
+  newStatus: TableStatus;
+  branchId: string;
+  updatedAt: string;
+}
+
 export interface SessionCheckoutEvent {
   _id: string;
   branchId: string;
@@ -43,6 +52,7 @@ export interface EventMap {
   orderStatusChanged: Order;
   paymentStatusChanged: Payment;
   sessionCheckout: SessionCheckoutEvent;
+  tableStatusChanged: TableStatusChangedEvent;
   connect: void;
   disconnect: void;
   connect_error: Error;

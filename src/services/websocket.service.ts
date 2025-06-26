@@ -5,6 +5,7 @@ import {
   OrderStatusChangedEvent,
   PaymentStatusChangedEvent,
   SessionCheckoutEvent,
+  TableStatusChangedEvent,
 } from "@/interfaces/websocket.interface";
 import { Order } from "@/interfaces/order.interface";
 import { Payment } from "@/interfaces/payment.interface";
@@ -15,6 +16,7 @@ type EventData =
   | OrderStatusChangedEvent
   | PaymentStatusChangedEvent
   | SessionCheckoutEvent
+  | TableStatusChangedEvent
   | Order
   | Payment
   | Error
@@ -252,6 +254,41 @@ class WebSocketService {
           } else {
             console.error(
               "Failed to send session checkout notification:",
+              response
+            );
+            reject(response);
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * แจ้งเตือนการเปลี่ยนสถานะโต๊ะ
+   */
+  notifyTableStatusChanged(
+    tableId: string,
+    status: string,
+    branchId: string
+  ): Promise<SocketResponse> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket?.connected) {
+        resolve({ success: false, message: "Not connected" });
+        return;
+      }
+
+      this.socket.emit(
+        "notifyTableStatusChanged",
+        { tableId, status, branchId },
+        (response: SocketResponse) => {
+          if (response.success) {
+            console.log(
+              `Table status notification sent for table ${tableId}: ${status}`
+            );
+            resolve(response);
+          } else {
+            console.error(
+              "Failed to send table status notification:",
               response
             );
             reject(response);

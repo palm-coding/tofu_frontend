@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AlertCircle, Coffee, Clock, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -10,6 +10,7 @@ import type { TableDisplay } from "@/interfaces/table.interface";
 import { QueueItem, NewQueueInput } from "@/interfaces/queue.interface";
 import { Branch } from "@/interfaces/branch.interface";
 import { Session } from "@/interfaces/session.interface";
+import { TableStatusChangedEvent } from "@/interfaces/websocket.interface";
 
 // นำเข้า helper functions จากไฟล์ที่แยกออกมา
 import {
@@ -29,11 +30,16 @@ import {
   orderService,
 } from "@/services/table.service";
 
+// เพิ่มการใช้งาน useOrdersSocket และ webSocketService
+import { useOrdersSocket } from "@/hooks/useOrdersSocket";
+import { webSocketService } from "@/services/websocket.service";
+
 // นำเข้า components
 import { TableQrCodeDialog } from "./dialogs/table-qrcode-dialog";
 import { TableDetailDialog } from "./dialogs/table-detail-dialog";
 import { TableManagement } from "./tabs/table-management";
 import { QueueManagement } from "./tabs/queue-management";
+import { toast } from "sonner";
 
 interface TableManagementProps {
   branchCode: string;
@@ -214,6 +220,21 @@ export function TableDisplay({ branchId }: TableManagementProps) {
         // 3. อัพเดตสถานะโต๊ะเป็น available
         await tableService.updateTable(tableId, { status: "available" });
 
+        // เพิ่มส่วนการแจ้งเตือนผ่าน WebSocket
+        if (branchId) {
+          try {
+            await webSocketService.notifyTableStatusChanged(
+              tableId,
+              "available",
+              branchId
+            );
+            console.log("Sent table status change notification via WebSocket");
+          } catch (wsErr) {
+            console.error("Failed to notify table status change:", wsErr);
+            // ไม่ต้องหยุดการทำงานถ้าการแจ้งเตือน WebSocket ล้มเหลว
+          }
+        }
+
         // 4. อัพเดต tables state
         setTables(
           tables.map((table) =>
@@ -245,6 +266,50 @@ export function TableDisplay({ branchId }: TableManagementProps) {
       setError("ไม่สามารถเช็คเอาท์โต๊ะได้ กรุณาลองอีกครั้ง");
     }
   };
+
+  // เพิ่ม handler สำหรับการรับการแจ้งเตือนเมื่อมีการเปลี่ยนแปลงสถานะโต๊ะ
+  const handleTableStatusChanged = useCallback(
+    (tableEvent: TableStatusChangedEvent) => {
+      console.log("Table status changed notification received:", tableEvent);
+
+      // อัพเดต UI เมื่อมีการเปลี่ยนแปลงสถานะโต๊ะ
+      setTables((currentTables) =>
+        currentTables.map((table) => {
+          if (table._id === tableEvent.table._id) {
+            return {
+              ...table,
+              status: tableEvent.newStatus,
+            };
+          }
+          return table;
+        })
+      );
+
+      // แสดง toast notification
+      toast.info(
+        `สถานะโต๊ะเปลี่ยนเป็น ${getStatusText(tableEvent.newStatus)}`,
+        {
+          description: (
+            <div>
+              <div className="font-medium">{tableEvent.table.name}</div>
+              <div className="text-xs text-muted-foreground mt-1">
+                อัพเดตเมื่อ {getTimeAgo(tableEvent.updatedAt)}
+              </div>
+            </div>
+          ),
+          duration: 3000,
+        }
+      );
+    },
+    [getStatusText, getTimeAgo]
+  );
+
+  // เชื่อมต่อกับ WebSocket
+  const { isConnected } = useOrdersSocket({
+    branchId,
+    onTableStatusChanged: handleTableStatusChanged,
+    onError: (error) => console.error("WebSocket error:", error),
+  });
 
   // เปิดรายละเอียดโต๊ะ - เพิ่มการดึงข้อมูล session
   const handleOpenDetails = async (table: TableDisplay) => {
@@ -478,8 +543,8 @@ export function TableDisplay({ branchId }: TableManagementProps) {
   const getOrderUrl = () => {
     // ใช้ window.location.origin เพื่อรับ origin ของเว็บปัจจุบันโดยอัตโนมัติ
     // จะทำงานได้ทั้งใน development และ production environment
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-  
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+
     // กรณีที่มี session และมี qrCode - กรณีหลักที่ใช้งาน
     if (selectedSession?.qrCode) {
       return `${origin}/order/${selectedSession.qrCode}`;
@@ -508,6 +573,11 @@ export function TableDisplay({ branchId }: TableManagementProps) {
           <div className="flex flex-col space-y-3">
             <h1 className="text-4xl font-light tracking-tight text-foreground">
               จัดการโต๊ะและคิว
+              {isConnected && (
+                <span className="ml-2 text-sm font-normal text-green-500 bg-green-100 px-2 py-1 rounded-full">
+                  real-time พร้อมใช้งาน
+                </span>
+              )}
             </h1>
             <p className="text-muted-foreground text-lg">
               จัดการโต๊ะ สร้าง QR Code และจัดการคิวลูกค้า

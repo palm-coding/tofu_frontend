@@ -2,7 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { webSocketService } from "@/services/websocket.service";
 import { Order } from "@/interfaces/order.interface";
 import { Payment } from "@/interfaces/payment.interface";
-import { SessionCheckoutEvent } from "@/interfaces/websocket.interface";
+import {
+  SessionCheckoutEvent,
+  TableStatusChangedEvent,
+} from "@/interfaces/websocket.interface";
 
 interface UseOrdersSocketOptions {
   branchId?: string;
@@ -12,6 +15,7 @@ interface UseOrdersSocketOptions {
   onOrderStatusChanged?: (order: Order) => void;
   onPaymentStatusChanged?: (payment: Payment) => void;
   onSessionCheckout?: (session: SessionCheckoutEvent) => void;
+  onTableStatusChanged?: (tableEvent: TableStatusChangedEvent) => void;
   onError?: (error: Error) => void;
 }
 
@@ -23,6 +27,7 @@ export function useOrdersSocket({
   onOrderStatusChanged,
   onPaymentStatusChanged,
   onSessionCheckout,
+  onTableStatusChanged,
   onError,
 }: UseOrdersSocketOptions) {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -80,6 +85,18 @@ export function useOrdersSocket({
     [onSessionCheckout]
   );
 
+  // เพิ่ม handler สำหรับการเปลี่ยนแปลงสถานะโต๊ะ
+  const handleTableStatusChanged = useCallback(
+    (eventData: unknown) => {
+      const tableEvent = eventData as TableStatusChangedEvent;
+      console.log("Table status changed via WebSocket:", tableEvent);
+      if (onTableStatusChanged) {
+        onTableStatusChanged(tableEvent);
+      }
+    },
+    [onTableStatusChanged]
+  );
+
   // เชื่อมต่อกับ WebSocket และตั้งค่า event listeners
   useEffect(() => {
     try {
@@ -120,6 +137,11 @@ export function useOrdersSocket({
         handleSessionCheckout
       );
 
+      const tableStatusChangedUnsubscribe = webSocketService.on(
+        "tableStatusChanged",
+        handleTableStatusChanged
+      );
+
       // ตรวจสอบสถานะการเชื่อมต่อปัจจุบัน
       setIsConnected(socket.connected);
 
@@ -132,6 +154,7 @@ export function useOrdersSocket({
         orderStatusChangedUnsubscribe();
         paymentStatusChangedUnsubscribe();
         sessionCheckoutUnsubscribe();
+        tableStatusChangedUnsubscribe();
       };
     } catch (err) {
       console.error("Failed to initialize WebSocket:", err);
@@ -144,6 +167,7 @@ export function useOrdersSocket({
     handleOrderStatusChanged,
     handlePaymentStatusChanged,
     handleSessionCheckout,
+    handleTableStatusChanged,
     onError,
   ]);
 
@@ -252,5 +276,12 @@ export function useOrdersSocket({
     setIsSessionJoined(false);
   }, []);
 
-  return { isConnected, isBranchJoined, isOrderRoomJoined, isSessionJoined, error, disconnect };
+  return {
+    isConnected,
+    isBranchJoined,
+    isOrderRoomJoined,
+    isSessionJoined,
+    error,
+    disconnect,
+  };
 }
