@@ -681,7 +681,7 @@ export function OrderDisplay({ qrCode }: OrderPageProps) {
     }
   };
 
-  // แก้ไขฟังก์ชัน submitOrder เพื่อใช้ฟังก์ชัน helpers สำหรับดึง ID 
+  // แก้ไขฟังก์ชัน submitOrder เพื่อใช้ฟังก์ชัน helper สำหรับดึง ID 
   const submitOrder = async () => {
     if (cart.length === 0 || isSubmitting) return;
 
